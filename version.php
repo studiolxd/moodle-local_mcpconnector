@@ -31,5 +31,5 @@ $plugin->component    = 'local_mcpconnector';
 $plugin->release      = '1.0.0';
 $plugin->version      = 2026080600;
 $plugin->requires     = 2023042400; // Moodle 4.2.
-$plugin->supported    = [402, 501]; // Moodle 4.2 to 5.1.
+$plugin->supported    = [402, 502]; // Moodle 4.2 to 5.2.
 $plugin->maturity     = MATURITY_STABLE;
