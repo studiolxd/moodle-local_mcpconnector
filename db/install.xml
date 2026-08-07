@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/mcpconnector/db" VERSION="20260710" COMMENT="XMLDB file for Moodle local/mcpconnector"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_mcpconnector_keys" COMMENT="Local metadata for MCP keys minted on the panel. The key value is never stored.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Moodle user the key belongs to."/>
+        <FIELD NAME="panelkeyid" TYPE="char" LENGTH="36" NOTNULL="true" SEQUENCE="false" COMMENT="Panel-side key id (uuid)."/>
+        <FIELD NAME="keylast4" TYPE="char" LENGTH="8" NOTNULL="false" SEQUENCE="false" COMMENT="Last characters of the key for display."/>
+        <FIELD NAME="roles" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="CSV of Moodle roles baked into the key."/>
+        <FIELD NAME="status" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="active" SEQUENCE="false" COMMENT="active, suspended or revoked."/>
+        <FIELD NAME="sentat" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="When the key value was emailed to the user, null if never."/>
+        <FIELD NAME="expiresat" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="When the key expires (unix), null for no expiry."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="panelkeyid" UNIQUE="true" FIELDS="panelkeyid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
