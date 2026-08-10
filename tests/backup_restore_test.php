@@ -112,6 +112,10 @@ final class backup_restore_test extends \advanced_testcase {
             restore_course::restore_mbz($garbage, (int) $category->id);
         } finally {
             @unlink($garbage);
+            // Unpacking the garbage makes core report 'Not a zip archive.' through
+            // debugging() before we reject it — expected here, so assert it rather
+            // than let it surface as an unexpected call.
+            $this->assertDebuggingCalled();
             $this->assertSame($before, $DB->count_records('course'));
         }
     }

@@ -800,6 +800,7 @@ function local_mcpconnector_get_service_id_map(): array {
  * @param string $panelkeyid Panel-side key id (uuid).
  * @param string $keylast4
  * @param string[] $roles
+ * @param int|null $expiresat Unix timestamp the key lapses at, null for no expiry.
  * @return void
  */
 function local_mcpconnector_record_local_key(

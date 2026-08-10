@@ -116,6 +116,7 @@ final class import_questions extends external_api {
      * @param int $addtoquiz
      * @param string $matchgrades
      * @param int $stoponerror
+     * @param string|null $category Category path inside the target bank, created if missing.
      * @return array
      */
     public static function execute(

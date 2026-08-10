@@ -76,6 +76,10 @@ final class external_issue_badge_test extends \advanced_testcase {
         $user = $this->getDataGenerator()->create_user();
 
         $result = issue_badge::execute($badgeid, (int) $user->id);
+        // Moodle 4.2's badges_bake() reports 'Error baking badge image!' through
+        // debugging() when it runs headless; 4.5 onwards no longer does. It comes
+        // from core and says nothing about this plugin, so discard it.
+        $this->resetDebugging();
         $result = issue_badge::clean_returnvalue(issue_badge::execute_returns(), $result);
         $this->assertTrue($result['success']);
         $this->assertFalse($result['alreadyissued']);
@@ -86,6 +90,7 @@ final class external_issue_badge_test extends \advanced_testcase {
 
         // Second award: no duplicate row, flagged as already issued.
         $again = issue_badge::execute($badgeid, (int) $user->id);
+        $this->resetDebugging();
         $again = issue_badge::clean_returnvalue(issue_badge::execute_returns(), $again);
         $this->assertTrue($again['success']);
         $this->assertTrue($again['alreadyissued']);

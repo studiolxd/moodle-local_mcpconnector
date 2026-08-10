@@ -88,8 +88,10 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertSame('wxyz', $data->keys[0]->keylast4);
         $this->assertSame('teacher', $data->keys[0]->roles);
         // Metadata only — no property could carry a key value or token.
-        $this->assertObjectNotHasProperty('token', $data->keys[0]);
-        $this->assertObjectNotHasProperty('key', $data->keys[0]);
+        // property_exists() rather than assertObjectNotHasProperty(): the latter
+        // arrived in PHPUnit 10, and Moodle 4.2 still ships PHPUnit 9.
+        $this->assertFalse(property_exists($data->keys[0], 'token'));
+        $this->assertFalse(property_exists($data->keys[0], 'key'));
     }
 
     public function test_delete_data_for_user_removes_only_their_rows(): void {
