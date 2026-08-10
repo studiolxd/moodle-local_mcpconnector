@@ -14,22 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_mcpconnector;
+
 /**
- * Version information for the MCP Connector for Moodle.
+ * Stand-in for a gadget: records whether PHP ever brought it to life.
+ *
+ * Deserializing this class is what an object-injection payload relies on —
+ * unserialize() runs __wakeup() on whatever it builds. Anything reading
+ * untrusted serialized data must leave $woken false.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+class wakeup_probe {
+    /** @var bool Set by __wakeup(), so a test can tell whether it ran. */
+    public static $woken = false;
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'local_mcpconnector';
-// Public launch renumbering: the 2.x series was internal; 1.0.0 succeeds
-// 2.24. Moodle upgrades key on $plugin->version (the date integer), never on
-// this label, so updating over any installed 2.x works normally.
-$plugin->release      = '1.0.2';
-$plugin->version      = 2026081001;
-$plugin->requires     = 2023042400; // Moodle 4.2.
-$plugin->supported    = [402, 502]; // Moodle 4.2 to 5.2.
-$plugin->maturity     = MATURITY_STABLE;
+    /**
+     * Marks the class as instantiated through deserialization.
+     *
+     * @return void
+     */
+    public function __wakeup(): void {
+        self::$woken = true;
+    }
+}

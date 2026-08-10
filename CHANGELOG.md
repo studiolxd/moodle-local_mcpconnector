@@ -2,6 +2,22 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.0.2 — 2026-08-10
+
+Hardening release: no functional change, no database change.
+
+### Fixed
+- **Display options of a page are no longer read with `unserialize()`.** When
+  updating a page, the plugin reads `page.displayoptions` to preserve the
+  existing settings. That column is not trustworthy — mod_page's restore step
+  inserts the record verbatim, so a restored backup decides its contents — and
+  `unserialize()` instantiates whatever objects the data describes, running
+  their `__wakeup()`. It now goes through core's `unserialize_array()`, which
+  parses arrays only and rejects objects, exactly as core itself reads this
+  field. Covered by a regression test that fails against the previous code.
+- **Four development comments left in Spanish** in `settings.php`, missed by
+  the 1.0.1 sweep.
+
 ## 1.0.1 — 2026-08-10
 
 Housekeeping release: no functional change, no database change. Everything

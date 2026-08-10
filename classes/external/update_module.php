@@ -493,7 +493,12 @@ final class update_module extends external_api {
                 'itemid' => $draftid,
             ];
 
-            $opts = @unserialize($data->displayoptions ?? '') ?: [];
+            // Read through unserialize_array(), not unserialize(): a restored
+            // .mbz can put arbitrary bytes in this column (mod_page's restore
+            // step inserts the record verbatim), and plain unserialize() would
+            // instantiate whatever objects they describe. Core reads it the
+            // same way — see mod/page/view.php.
+            $opts = empty($data->displayoptions) ? [] : (array) unserialize_array($data->displayoptions);
             $data->printintro = $opts['printintro'] ?? 0;
             $data->printlastmodified = $opts['printlastmodified'] ?? 1;
             $data->popupwidth = $opts['popupwidth'] ?? 620;

@@ -42,7 +42,7 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
-    // Servicios.
+    // Services.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_services',
         get_string('tab_services', 'local_mcpconnector'),
@@ -50,7 +50,7 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
-    // Usuarios.
+    // Users.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_users',
         get_string('tab_users', 'local_mcpconnector'),
@@ -58,7 +58,7 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
-    // Claves.
+    // Keys.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_keys',
         get_string('tab_keys', 'local_mcpconnector'),
@@ -66,7 +66,7 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
-    // Salud.
+    // Health.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_health',
         get_string('tab_health', 'local_mcpconnector'),
