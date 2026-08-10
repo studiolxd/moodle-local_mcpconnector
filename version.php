@@ -28,8 +28,8 @@ $plugin->component    = 'local_mcpconnector';
 // Public launch renumbering: the 2.x series was internal; 1.0.0 succeeds
 // 2.24. Moodle upgrades key on $plugin->version (the date integer), never on
 // this label, so updating over any installed 2.x works normally.
-$plugin->release      = '1.0.0';
-$plugin->version      = 2026080600;
+$plugin->release      = '1.0.1';
+$plugin->version      = 2026081000;
 $plugin->requires     = 2023042400; // Moodle 4.2.
 $plugin->supported    = [402, 502]; // Moodle 4.2 to 5.2.
 $plugin->maturity     = MATURITY_STABLE;

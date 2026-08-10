@@ -46,8 +46,8 @@ class create_module extends external_api {
             'assessed' => 0,
             'scale' => 0,
         ],
-        // page_add_instance reads these unconditionally (mod/page/lib.php).
-        // display 0 = RESOURCELIB_DISPLAY_AUTO; contentformat 1 = HTML.
+        // These are read unconditionally by page_add_instance (mod/page/lib.php).
+        // Display 0 = RESOURCELIB_DISPLAY_AUTO; contentformat 1 = HTML.
         'page' => [
             'content' => '',
             'contentformat' => 1,
@@ -55,9 +55,9 @@ class create_module extends external_api {
             'printintro' => 0,
             'printlastmodified' => 1,
         ],
-        // url_add_instance reads display unconditionally and popup sizes when
-        // display is popup (mod/url/lib.php). externalurl arrives via the
-        // dedicated parameter; display 0 = RESOURCELIB_DISPLAY_AUTO.
+        // Read by url_add_instance: display unconditionally, and the popup sizes
+        // only when display is popup (mod/url/lib.php). The externalurl arrives
+        // via the dedicated parameter; display 0 = RESOURCELIB_DISPLAY_AUTO.
         'url' => [
             'externalurl' => '',
             'display' => 0,
@@ -65,13 +65,13 @@ class create_module extends external_api {
             'popupwidth' => 620,
             'popupheight' => 450,
         ],
-        // quiz_add_instance/quiz_process_options read most quiz fields
-        // unconditionally — full canonical map (create_quiz is the rich API).
+        // Most quiz fields are read unconditionally by quiz_add_instance and
+        // quiz_process_options — full canonical map (create_quiz is the rich API).
         'quiz' => create_quiz::QUIZ_DEFAULTS,
-        // assign::add_instance reads these unconditionally (mod/assign
-        // generator map). add_instance also DISABLES every submission/
-        // feedback plugin without an _enabled field, so file submissions are
-        // enabled by default here (update_assign is the rich API).
+        // These are read unconditionally by assign::add_instance (mod/assign
+        // generator map), which also DISABLES every submission/feedback plugin
+        // without an _enabled field, so file submissions are enabled by default
+        // here (update_assign is the rich API).
         'assign' => [
             'alwaysshowdescription' => 1,
             'submissiondrafts' => 0,
@@ -123,11 +123,18 @@ class create_module extends external_api {
                 VALUE_DEFAULT,
                 null
             ),
-            'externalurl' => new external_value(PARAM_RAW,
-                "URL-module only: the external http(s) address the resource opens", VALUE_DEFAULT, null),
-            'display' => new external_value(PARAM_INT,
+            'externalurl' => new external_value(
+                PARAM_RAW,
+                "URL-module only: the external http(s) address the resource opens",
+                VALUE_DEFAULT,
+                null
+            ),
+            'display' => new external_value(
+                PARAM_INT,
                 'URL-module only: display mode (0 auto, 1 embed, 3 new window, 5 open, 6 popup)',
-                VALUE_DEFAULT, null),
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -198,8 +205,10 @@ class create_module extends external_api {
         if ($modname === 'url') {
             // A url resource without a destination is useless — require it.
             $externalurl = trim((string) $externalurl);
-            if ($externalurl === '' || !preg_match('~^https?://~i', $externalurl)
-                    || clean_param($externalurl, PARAM_URL) !== $externalurl) {
+            if (
+                $externalurl === '' || !preg_match('~^https?://~i', $externalurl)
+                    || clean_param($externalurl, PARAM_URL) !== $externalurl
+            ) {
                 \local_mcpconnector\local\reject::because(
                     'externalurl must be a valid http(s) URL (required for mod_url)'
                 );

@@ -63,65 +63,144 @@ final class create_scorm extends external_api {
      */
     public static function settings_parameters(): array {
         return [
-            'grademethod' => new external_value(PARAM_INT,
+            'grademethod' => new external_value(
+                PARAM_INT,
                 'Grading method: 0 highest grade of any SCO, 1 highest overall score, '
                 . '2 average of all SCOs, 3 sum of all SCOs. Default: site default (0).',
-                VALUE_DEFAULT, null),
-            'maxgrade' => new external_value(PARAM_INT, 'Maximum grade (points). Default: site default.',
-                VALUE_DEFAULT, null),
-            'whatgrade' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'maxgrade' => new external_value(
+                PARAM_INT,
+                'Maximum grade (points). Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'whatgrade' => new external_value(
+                PARAM_INT,
                 'Which attempt counts: 0 highest, 1 average, 2 first, 3 last. Default: site default.',
-                VALUE_DEFAULT, null),
-            'maxattempt' => new external_value(PARAM_INT,
-                'Maximum number of attempts (0 = unlimited). Default: site default.', VALUE_DEFAULT, null),
-            'forcenewattempt' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'maxattempt' => new external_value(
+                PARAM_INT,
+                'Maximum number of attempts (0 = unlimited). Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'forcenewattempt' => new external_value(
+                PARAM_INT,
                 'Force new attempt: 0 no, 1 always, 2 only if the previous was incomplete. Default: site default.',
-                VALUE_DEFAULT, null),
-            'forcecompleted' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'forcecompleted' => new external_value(
+                PARAM_INT,
                 'Force completed: 1 the attempt is marked completed as soon as it starts, 0 off. Default: site default.',
-                VALUE_DEFAULT, null),
-            'lastattemptlock' => new external_value(PARAM_INT,
-                'Lock after final attempt: 1 yes, 0 no. Default: site default.', VALUE_DEFAULT, null),
-            'masteryoverride' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'lastattemptlock' => new external_value(
+                PARAM_INT,
+                'Lock after final attempt: 1 yes, 0 no. Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'masteryoverride' => new external_value(
+                PARAM_INT,
                 "Mastery score overrides 'status' (if the SCO sets cmi.core.lesson_status, a mastery "
                 . "score can still force completed/passed): 1 yes, 0 no. Default: site default.",
-                VALUE_DEFAULT, null),
-            'auto' => new external_value(PARAM_INT,
-                'Auto-continue to the next SCO: 1 yes, 0 no. Default: site default.', VALUE_DEFAULT, null),
-            'popup' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'auto' => new external_value(
+                PARAM_INT,
+                'Auto-continue to the next SCO: 1 yes, 0 no. Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'popup' => new external_value(
+                PARAM_INT,
                 'Display package: 0 current window (default), 1 new pop-up window (uses width/height).',
-                VALUE_DEFAULT, null),
-            'width' => new external_value(PARAM_INT, 'Pop-up/frame width in pixels. Default: site default.',
-                VALUE_DEFAULT, null),
-            'height' => new external_value(PARAM_INT, 'Pop-up/frame height in pixels. Default: site default.',
-                VALUE_DEFAULT, null),
-            'skipview' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'width' => new external_value(
+                PARAM_INT,
+                'Pop-up/frame width in pixels. Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'height' => new external_value(
+                PARAM_INT,
+                'Pop-up/frame height in pixels. Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'skipview' => new external_value(
+                PARAM_INT,
                 'Skip content page (single-SCO packages): 0 never, 1 only the first time, 2 always. '
-                . 'Default: site default.', VALUE_DEFAULT, null),
-            'hidebrowse' => new external_value(PARAM_INT,
-                "Hide the 'Browse' mode button: 1 yes, 0 no. Default: site default.", VALUE_DEFAULT, null),
-            'displaycoursestructure' => new external_value(PARAM_INT,
+                . 'Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'hidebrowse' => new external_value(
+                PARAM_INT,
+                "Hide the 'Browse' mode button: 1 yes, 0 no. Default: site default.",
+                VALUE_DEFAULT,
+                null
+            ),
+            'displaycoursestructure' => new external_value(
+                PARAM_INT,
                 'Show the course structure (table of contents) on the entry page: 1 yes, 0 no. '
-                . 'Default: site default.', VALUE_DEFAULT, null),
-            'hidetoc' => new external_value(PARAM_INT,
+                . 'Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'hidetoc' => new external_value(
+                PARAM_INT,
                 'Table of contents display: 0 show, 1 hide but show navigation, 2 hide with floating menu, '
-                . '3 hide everything (disable navigation). Default: site default.', VALUE_DEFAULT, null),
-            'nav' => new external_value(PARAM_INT,
+                . '3 hide everything (disable navigation). Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'nav' => new external_value(
+                PARAM_INT,
                 'Navigation buttons: 0 none, 1 show under content, 2 floating. Default: site default.',
-                VALUE_DEFAULT, null),
-            'navpositionleft' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'navpositionleft' => new external_value(
+                PARAM_INT,
                 'Floating navigation X position in pixels (only when nav=2). Default: site default.',
-                VALUE_DEFAULT, null),
-            'navpositiontop' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'navpositiontop' => new external_value(
+                PARAM_INT,
                 'Floating navigation Y position in pixels (only when nav=2). Default: site default.',
-                VALUE_DEFAULT, null),
-            'displayattemptstatus' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'displayattemptstatus' => new external_value(
+                PARAM_INT,
                 'Attempt/grade status visible to the student: 0 no, 1 my attempts, 2 all attempts, '
-                . '3 entire course. Default: site default.', VALUE_DEFAULT, null),
-            'timeopen' => new external_value(PARAM_INT, 'Open date (unix timestamp; 0 = none). Default: 0.',
-                VALUE_DEFAULT, null),
-            'timeclose' => new external_value(PARAM_INT, 'Close date (unix timestamp; 0 = none). Default: 0.',
-                VALUE_DEFAULT, null),
+                . '3 entire course. Default: site default.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'timeopen' => new external_value(
+                PARAM_INT,
+                'Open date (unix timestamp; 0 = none). Default: 0.',
+                VALUE_DEFAULT,
+                null
+            ),
+            'timeclose' => new external_value(
+                PARAM_INT,
+                'Close date (unix timestamp; 0 = none). Default: 0.',
+                VALUE_DEFAULT,
+                null
+            ),
         ];
     }
 
@@ -129,10 +208,15 @@ final class create_scorm extends external_api {
     private const GRADE_METHODS = [0, 1, 2, 3];
     /** Attempt-selection methods accepted by whatgrade. */
     private const WHAT_GRADE = [0, 1, 2, 3];
+    /** Values accepted by forcenewattempt: 0 no, 1 always, 2 only if incomplete. */
     private const FORCE_NEW_ATTEMPT = [0, 1, 2];
+    /** Values accepted by displayattemptstatus: 0 no, 1 mine, 2 all, 3 course. */
     private const DISPLAY_ATTEMPT_STATUS = [0, 1, 2, 3];
+    /** Values accepted by hidetoc: 0 show, 1 hide, 2 floating menu, 3 hide all. */
     private const HIDE_TOC = [0, 1, 2, 3];
+    /** Values accepted by nav: 0 none, 1 under content, 2 floating. */
     private const NAV = [0, 1, 2];
+    /** Values accepted by skipview: 0 never, 1 first time only, 2 always. */
     private const SKIPVIEW = [0, 1, 2];
 
     /**

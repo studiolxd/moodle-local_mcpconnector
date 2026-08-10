@@ -47,37 +47,76 @@ final class update_module extends external_api {
             'introformat' => new external_value(PARAM_INT, 'Format of intro (1 = HTML)', VALUE_DEFAULT, null),
             'visible' => new external_value(PARAM_INT, 'Visibility: 1 visible, 0 hidden', VALUE_DEFAULT, null),
             'idnumber' => new external_value(PARAM_RAW, 'ID number (gradebook/reporting identifier)', VALUE_DEFAULT, null),
-            'completion' => new external_value(PARAM_INT, 'Completion tracking: 0 none, 1 manual, 2 automatic', VALUE_DEFAULT, null),
+            'completion' => new external_value(
+                PARAM_INT,
+                'Completion tracking: 0 none, 1 manual, 2 automatic',
+                VALUE_DEFAULT,
+                null
+            ),
             'content' => new external_value(
                 PARAM_RAW,
                 "New main body (HTML). Only for content modules (currently mod_page); a label's body is its intro",
                 VALUE_DEFAULT,
                 null
             ),
-            'completionview' => new external_value(PARAM_INT,
-                'Automatic rule "student must view": 1 on, 0 off (implies completion=2)', VALUE_DEFAULT, null),
-            'completionusegrade' => new external_value(PARAM_INT,
-                'Automatic rule "student must receive a grade": 1 on, 0 off (implies completion=2)', VALUE_DEFAULT, null),
-            'completionpassgrade' => new external_value(PARAM_INT,
-                'Automatic rule "student must PASS" (needs a gradepass on the grade item): 1 on, 0 off', VALUE_DEFAULT, null),
-            'completionexpected' => new external_value(PARAM_INT,
-                'Expected completion date (unix timestamp; 0 = none)', VALUE_DEFAULT, null),
-            'completionscormstatus' => new external_value(PARAM_ALPHA,
+            'completionview' => new external_value(
+                PARAM_INT,
+                'Automatic rule "student must view": 1 on, 0 off (implies completion=2)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionusegrade' => new external_value(
+                PARAM_INT,
+                'Automatic rule "student must receive a grade": 1 on, 0 off (implies completion=2)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionpassgrade' => new external_value(
+                PARAM_INT,
+                'Automatic rule "student must PASS" (needs a gradepass on the grade item): 1 on, 0 off',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionexpected' => new external_value(
+                PARAM_INT,
+                'Expected completion date (unix timestamp; 0 = none)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionscormstatus' => new external_value(
+                PARAM_ALPHA,
                 "SCORM-only automatic rule 'require status': 'passed', 'completed', "
                 . "'passedorcompleted' (either counts) or 'none' (rule off). Implies completion=2",
-                VALUE_DEFAULT, null),
-            'completionstatusallscos' => new external_value(PARAM_INT,
-                'SCORM-only: the required status must be reached in ALL SCOs, 1 yes, 0 no', VALUE_DEFAULT, null),
-            'completionpassorattemptsexhausted' => new external_value(PARAM_INT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionstatusallscos' => new external_value(
+                PARAM_INT,
+                'SCORM-only: the required status must be reached in ALL SCOs, 1 yes, 0 no',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionpassorattemptsexhausted' => new external_value(
+                PARAM_INT,
                 'QUIZ-only automatic rule: completed when the student PASSES OR runs out of attempts. '
                 . '1 on (also enables usegrade+passgrade — Moodle requires them for this rule), 0 off',
-                VALUE_DEFAULT, null),
-            'completionminattempts' => new external_value(PARAM_INT,
-                'QUIZ-only automatic rule: require at least N attempts (0 = rule off)', VALUE_DEFAULT, null),
-            'availability' => new external_value(PARAM_RAW,
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionminattempts' => new external_value(
+                PARAM_INT,
+                'QUIZ-only automatic rule: require at least N attempts (0 = rule off)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'availability' => new external_value(
+                PARAM_RAW,
                 'Access restrictions: Moodle availability JSON tree as a STRING, e.g. '
                 . '{"op":"&","c":[{"type":"completion","cm":123,"e":1}],"showc":[true]}. '
-                . 'Empty string removes all restrictions.', VALUE_DEFAULT, null),
+                . 'Empty string removes all restrictions.',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -175,20 +214,33 @@ final class update_module extends external_api {
         require_capability('moodle/course:manageactivities', $modcontext);
 
         if ($content !== null && $cm->modname !== 'page') {
-            \local_mcpconnector\local\reject::because("content is only supported for mod_page (got '{$cm->modname}'); a label's body is its intro");
+            \local_mcpconnector\local\reject::because(
+                "content is only supported for mod_page (got '{$cm->modname}'); "
+                . "a label's body is its intro"
+            );
         }
 
         $scormrules = $completionscormstatus !== null || $completionstatusallscos !== null;
         if ($scormrules && $cm->modname !== 'scorm') {
-            \local_mcpconnector\local\reject::because("completionscormstatus/completionstatusallscos are only for mod_scorm (got '{$cm->modname}')");
+            \local_mcpconnector\local\reject::because(
+                'completionscormstatus/completionstatusallscos are only for mod_scorm '
+                . "(got '{$cm->modname}')"
+            );
         }
         $quizrules = $completionpassorattemptsexhausted !== null || $completionminattempts !== null;
         if ($quizrules && $cm->modname !== 'quiz') {
-            \local_mcpconnector\local\reject::because("completionpassorattemptsexhausted/completionminattempts are only for mod_quiz (got '{$cm->modname}')");
+            \local_mcpconnector\local\reject::because(
+                'completionpassorattemptsexhausted/completionminattempts are only for mod_quiz '
+                . "(got '{$cm->modname}')"
+            );
         }
-        if ($completionscormstatus !== null
-                && !in_array($completionscormstatus, ['passed', 'completed', 'passedorcompleted', 'none'], true)) {
-            \local_mcpconnector\local\reject::because("completionscormstatus must be 'passed', 'completed', 'passedorcompleted' or 'none'");
+        if (
+            $completionscormstatus !== null
+                && !in_array($completionscormstatus, ['passed', 'completed', 'passedorcompleted', 'none'], true)
+        ) {
+            \local_mcpconnector\local\reject::because(
+                "completionscormstatus must be 'passed', 'completed', 'passedorcompleted' or 'none'"
+            );
         }
 
         if ($availability !== null) {
@@ -258,26 +310,26 @@ final class update_module extends external_api {
         $PAGE->set_context($modcontext);
         [$cm, , , $data] = get_moduleinfo_data($cm, $course);
 
-        // get_moduleinfo_data prefills gradepass LOCALE-FORMATTED for the form
-        // ('0,00' in es) — the form undoes it with unformat_float; we must too
-        // or graded modules crash with a DB truncation error on update.
+        // Above, get_moduleinfo_data prefilled gradepass LOCALE-FORMATTED for the
+        // form ('0,00' in es) — the form undoes it with unformat_float; we must
+        // too, or graded modules crash with a DB truncation error on update.
         if (isset($data->gradepass)) {
             $data->gradepass = unformat_float($data->gradepass);
         }
 
         if ($cm->modname === 'quiz') {
-            // quiz_update_instance needs several fields only the mod_form
-            // seeds; without them the update CRASHES (password NOT NULL) or
-            // silently WIPES settings. Seed them from the current record,
-            // mirroring mod_form's data_preprocessing:
+            // Several fields needed by quiz_update_instance are only seeded by
+            // the mod_form; without them the update CRASHES (password NOT NULL)
+            // or silently WIPES settings. Seed them from the current record,
+            // mirroring mod_form's data_preprocessing.
             require_once($CFG->dirroot . '/mod/quiz/lib.php');
 
             // 1. quiz_process_options does $quiz->password = $quiz->quizpassword
-            //    unconditionally.
+            // unconditionally.
             $data->quizpassword = (string) ($data->password ?? '');
 
             // 2. Review options are rebuilt from the form's checkbox fields —
-            //    absent fields would zero every review bitmask.
+            // absent fields would zero every review bitmask.
             $times = [
                 'during' => \mod_quiz\question\display_options::DURING,
                 'immediately' => \mod_quiz\question\display_options::IMMEDIATELY_AFTER,
@@ -296,16 +348,16 @@ final class update_module extends external_api {
             $data->attemptduring = 1;
             $data->overallfeedbackduring = 0;
 
-            // quiz_process_options zeroes completionminattempts when its
+            // Completionminattempts is zeroed by quiz_process_options when its
             // 'enabled' form checkbox is absent (and completion is unlocked) —
             // derive it from the current value so unrelated completion
             // updates don't wipe the rule.
             $data->completionminattemptsenabled = !empty($data->completionminattempts) ? 1 : 0;
 
             // 3. quiz_after_add_or_update DELETES all quiz_feedback rows and
-            //    recreates them from these arrays — absent = overall feedback
-            //    silently wiped. Rebuild them from the existing rows, carrying
-            //    embedded files through a draft area.
+            // recreates them from these arrays — absent = overall feedback
+            // silently wiped. Rebuild them from the existing rows, carrying
+            // embedded files through a draft area.
             $feedbackrows = array_values(
                 $DB->get_records('quiz_feedback', ['quizid' => $cm->instance], 'mingrade DESC')
             );
@@ -317,8 +369,14 @@ final class update_module extends external_api {
             } else {
                 foreach ($feedbackrows as $i => $row) {
                     $draftid = null;
-                    file_prepare_draft_area($draftid, $modcontext->id, 'mod_quiz', 'feedback',
-                        (int) $row->id, ['subdirs' => false]);
+                    file_prepare_draft_area(
+                        $draftid,
+                        $modcontext->id,
+                        'mod_quiz',
+                        'feedback',
+                        (int) $row->id,
+                        ['subdirs' => false]
+                    );
                     $data->feedbacktext[$i] = [
                         'text' => $row->feedbacktext,
                         'format' => $row->feedbacktextformat,
@@ -351,15 +409,15 @@ final class update_module extends external_api {
             $data->cmidnumber = $idnumber;
         }
         if ($availability !== null) {
-            // update_moduleinfo's own path: validates with core_availability\tree,
-            // treats '' as remove (NULL), saves and rebuilds the course cache —
-            // the same code the settings form runs.
+            // This is update_moduleinfo's own path: validates with
+            // core_availability\tree, treats '' as remove (NULL), saves and
+            // rebuilds the course cache — the same code the settings form runs.
             $data->availabilityconditionsjson = $availability;
         }
         if ($touchescompletion) {
-            // update_moduleinfo only applies completion/completionview/
-            // completionusegrade/completionpassgrade when the form flags them
-            // as unlocked — without this, they are silently preserved.
+            // The completion/completionview/completionusegrade/completionpassgrade
+            // fields are only applied by update_moduleinfo when the form flags
+            // them as unlocked — without this, they are silently preserved.
             $data->completionunlocked = 1;
             // Rules imply automatic tracking unless the caller says otherwise.
             $data->completion = $completion
@@ -368,7 +426,7 @@ final class update_module extends external_api {
                 $data->completionview = $completionview ? 1 : 0;
             }
             if ($completionpassgrade !== null && $completionpassgrade) {
-                // "Must pass" needs the grade rule on (gradeitemnumber set).
+                // Must-pass needs the grade rule on (gradeitemnumber set).
                 $completionusegrade = 1;
             }
             if ($completionusegrade !== null) {
@@ -382,7 +440,7 @@ final class update_module extends external_api {
                 $data->completionexpected = $completionexpected;
             }
             if ($completionscormstatus !== null) {
-                // scorm table column: bitmask of scorm_status_options()
+                // Scorm table column: bitmask of scorm_status_options()
                 // (2 = passed, 4 = completed); null = rule off.
                 $data->completionstatusrequired = [
                     'passed' => 2,
@@ -396,10 +454,10 @@ final class update_module extends external_api {
             }
             if ($completionpassorattemptsexhausted !== null) {
                 if ($completionpassorattemptsexhausted) {
-                    // quiz_process_options zeroes completionattemptsexhausted
-                    // unless usegrade AND passgrade are on — the OR with
-                    // "attempts exhausted" is exactly what softens the pass
-                    // requirement into "done".
+                    // Completionattemptsexhausted is zeroed by
+                    // quiz_process_options unless usegrade AND passgrade are on
+                    // — the OR with 'attempts exhausted' is exactly what softens
+                    // the pass requirement into 'done'.
                     $data->completionusegrade = 1;
                     $data->completiongradeitemnumber = 0;
                     $data->completionpassgrade = 1;
@@ -414,12 +472,12 @@ final class update_module extends external_api {
             }
         }
         if ($cm->modname === 'page') {
-            // page_update_instance calls page_get_editor_options(), which lives
-            // in locallib.php — loaded by the mod_form flow but NOT by
+            // Page_get_editor_options(), called by page_update_instance, lives in
+            // locallib.php — loaded by the mod_form flow but NOT by
             // update_moduleinfo (it only includes the module's lib.php).
             require_once($CFG->dirroot . '/mod/page/locallib.php');
 
-            // page_update_instance unconditionally reads $data->page['itemid']
+            // Unconditionally, page_update_instance reads $data->page['itemid']
             // and the display fields (normally seeded by the mod_form's
             // data_preprocessing, which we bypass with $mform = null) — so the
             // page array must be seeded on EVERY full update, keeping the

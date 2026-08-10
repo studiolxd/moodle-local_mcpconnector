@@ -115,15 +115,27 @@ final class create_quiz extends external_api {
             'timeclose' => new external_value(PARAM_INT, 'Close timestamp (0 = never)', VALUE_DEFAULT, null),
             'timelimit' => new external_value(PARAM_INT, 'Time limit in seconds (0 = none)', VALUE_DEFAULT, null),
             'attempts' => new external_value(PARAM_INT, 'Allowed attempts (0 = unlimited)', VALUE_DEFAULT, null),
-            'grademethod' => new external_value(PARAM_INT,
-                'Grading: 1 highest, 2 average, 3 first, 4 last attempt', VALUE_DEFAULT, null),
+            'grademethod' => new external_value(
+                PARAM_INT,
+                'Grading: 1 highest, 2 average, 3 first, 4 last attempt',
+                VALUE_DEFAULT,
+                null
+            ),
             'grade' => new external_value(PARAM_FLOAT, 'Maximum grade (default 100)', VALUE_DEFAULT, null),
             'gradepass' => new external_value(PARAM_FLOAT, 'Grade to pass (0 = none)', VALUE_DEFAULT, null),
-            'preferredbehaviour' => new external_value(PARAM_ALPHANUMEXT,
+            'preferredbehaviour' => new external_value(
+                PARAM_ALPHANUMEXT,
                 'Question behaviour: deferredfeedback (default), immediatefeedback, interactive, adaptive…',
-                VALUE_DEFAULT, null),
+                VALUE_DEFAULT,
+                null
+            ),
             'questionsperpage' => new external_value(PARAM_INT, 'New page every N questions (default 1)', VALUE_DEFAULT, null),
-            'shuffleanswers' => new external_value(PARAM_INT, 'Shuffle within questions: 1 yes (default), 0 no', VALUE_DEFAULT, null),
+            'shuffleanswers' => new external_value(
+                PARAM_INT,
+                'Shuffle within questions: 1 yes (default), 0 no',
+                VALUE_DEFAULT,
+                null
+            ),
             'navmethod' => new external_value(PARAM_ALPHA, "Navigation: 'free' (default) or 'sequential'", VALUE_DEFAULT, null),
             'password' => new external_value(PARAM_TEXT, 'Password required to attempt', VALUE_DEFAULT, null),
         ]);

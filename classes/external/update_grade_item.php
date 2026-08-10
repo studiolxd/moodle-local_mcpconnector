@@ -43,18 +43,32 @@ final class update_grade_item extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_REQUIRED),
-            'itemid' => new external_value(PARAM_INT,
-                'Grade item id (from core_grades_get_gradeitems)', VALUE_REQUIRED),
-            'grademax' => new external_value(PARAM_FLOAT,
+            'itemid' => new external_value(
+                PARAM_INT,
+                'Grade item id (from core_grades_get_gradeitems)',
+                VALUE_REQUIRED
+            ),
+            'grademax' => new external_value(
+                PARAM_FLOAT,
                 'Maximum grade. Module items: only quiz (updates the quiz "Maximum grade" '
                 . 'setting and rescales attempts); manual/category items: set directly.',
-                VALUE_DEFAULT, null),
+                VALUE_DEFAULT,
+                null
+            ),
             'gradepass' => new external_value(PARAM_FLOAT, 'Grade to pass (0 = none)', VALUE_DEFAULT, null),
-            'weight' => new external_value(PARAM_FLOAT,
-                'Weight as 0-100 percentage (Natural aggregation; sets the override flag)', VALUE_DEFAULT, null),
+            'weight' => new external_value(
+                PARAM_FLOAT,
+                'Weight as 0-100 percentage (Natural aggregation; sets the override flag)',
+                VALUE_DEFAULT,
+                null
+            ),
             'hidden' => new external_value(PARAM_INT, 'Hide the item: 1 hidden, 0 visible', VALUE_DEFAULT, null),
-            'categoryid' => new external_value(PARAM_INT,
-                'Move the item into this grade category id', VALUE_DEFAULT, null),
+            'categoryid' => new external_value(
+                PARAM_INT,
+                'Move the item into this grade category id',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -207,9 +221,12 @@ final class update_grade_item extends external_api {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Whether the update was applied'),
             'itemid' => new external_value(PARAM_INT, 'Grade item id'),
-            'warning' => new external_value(PARAM_TEXT,
+            'warning' => new external_value(
+                PARAM_TEXT,
                 'Non-empty when the item ended in a state worth reviewing (e.g. gradepass above grademax)',
-                VALUE_DEFAULT, ''),
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 }

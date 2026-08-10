@@ -47,16 +47,24 @@ final class create_book extends external_api {
                 new external_single_structure([
                     'title' => new external_value(PARAM_TEXT, 'Chapter title', VALUE_REQUIRED),
                     'content' => new external_value(PARAM_RAW, 'Chapter body (HTML)', VALUE_REQUIRED),
-                    'subchapter' => new external_value(PARAM_INT,
-                        '1 = subchapter of the previous top-level chapter', VALUE_DEFAULT, 0),
+                    'subchapter' => new external_value(
+                        PARAM_INT,
+                        '1 = subchapter of the previous top-level chapter',
+                        VALUE_DEFAULT,
+                        0
+                    ),
                 ]),
                 'Ordered chapters',
                 VALUE_REQUIRED
             ),
             'intro' => new external_value(PARAM_RAW, 'Description (HTML)', VALUE_DEFAULT, ''),
             'visible' => new external_value(PARAM_INT, 'Visibility: 1 visible, 0 hidden', VALUE_DEFAULT, 1),
-            'numbering' => new external_value(PARAM_INT,
-                'Chapter numbering: 0 none, 1 numbers (default), 2 bullets, 3 indented', VALUE_DEFAULT, 1),
+            'numbering' => new external_value(
+                PARAM_INT,
+                'Chapter numbering: 0 none, 1 numbers (default), 2 bullets, 3 indented',
+                VALUE_DEFAULT,
+                1
+            ),
         ]);
     }
 

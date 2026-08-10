@@ -2,6 +2,29 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.0.1 — 2026-08-10
+
+Housekeeping release: no functional change, no database change. Everything
+below is about meeting the standards the moodle.org plugins directory checks.
+
+### Added
+- **Continuous integration.** A `moodle-plugin-ci` workflow now runs on every
+  push, covering both ends of the supported range (Moodle 4.2 on PHP 8.1 and
+  Moodle 5.2 on PHP 8.3) against PostgreSQL and MariaDB: lint, coding style,
+  PHPDoc, validation, upgrade savepoints and the PHPUnit suite.
+
+### Fixed
+- **Moodle coding style.** 777 violations reported by `moodle-cs` are gone,
+  the bulk of them indentation of multi-line function calls. Language files
+  are now alphabetically ordered as `moodle.Files.LangFilesOrdering` requires
+  — same 178 strings with the same values in both `en` and `es`, only the
+  order changed.
+- **Development comments left in Spanish** in `settings.php` are now English,
+  as required for a published plugin.
+- **The header of `db/service_functions.php`** pointed at a generator script
+  that no longer exists, which made the provenance of that file impossible to
+  verify. It now describes where the whitelists actually come from.
+
 ## 1.0.0 — 2026-08-06
 
 Public launch. The 2.x series below was internal pre-release numbering;

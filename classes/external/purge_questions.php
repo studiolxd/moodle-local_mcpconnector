@@ -44,17 +44,30 @@ final class purge_questions extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'categoryid' => new external_value(PARAM_INT,
-                'Purge this question category (pass this OR questionids)', VALUE_DEFAULT, null),
+            'categoryid' => new external_value(
+                PARAM_INT,
+                'Purge this question category (pass this OR questionids)',
+                VALUE_DEFAULT,
+                null
+            ),
             'questionids' => new external_multiple_structure(
                 new external_value(PARAM_INT, 'Question id'),
                 'Delete these specific questions (pass this OR categoryid)',
-                VALUE_DEFAULT, []
+                VALUE_DEFAULT,
+                []
             ),
-            'includesubcategories' => new external_value(PARAM_INT,
-                'With categoryid: also purge subcategories, 1 yes (default), 0 no', VALUE_DEFAULT, 1),
-            'deletecategories' => new external_value(PARAM_INT,
-                'With categoryid: also delete the emptied categories, 1 yes, 0 no (default)', VALUE_DEFAULT, 0),
+            'includesubcategories' => new external_value(
+                PARAM_INT,
+                'With categoryid: also purge subcategories, 1 yes (default), 0 no',
+                VALUE_DEFAULT,
+                1
+            ),
+            'deletecategories' => new external_value(
+                PARAM_INT,
+                'With categoryid: also delete the emptied categories, 1 yes, 0 no (default)',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 
@@ -123,8 +136,12 @@ final class purge_questions extends external_api {
             $queue = [(int) $rootcat->id];
             while ($queue !== []) {
                 $parent = array_shift($queue);
-                $children = $DB->get_fieldset_select('question_categories', 'id',
-                    'parent = ? AND contextid = ?', [$parent, $rootcat->contextid]);
+                $children = $DB->get_fieldset_select(
+                    'question_categories',
+                    'id',
+                    'parent = ? AND contextid = ?',
+                    [$parent, $rootcat->contextid]
+                );
                 foreach ($children as $child) {
                     $catids[] = (int) $child;
                     $queue[] = (int) $child;
@@ -153,8 +170,10 @@ final class purge_questions extends external_api {
             \local_mcpconnector\local\compat::require_category_manager(
                 'local_mcpconnector_purge_questions (deletecategories)'
             );
-            require_capability('moodle/question:managecategory',
-                \core\context::instance_by_id($rootcat->contextid));
+            require_capability(
+                'moodle/question:managecategory',
+                \core\context::instance_by_id($rootcat->contextid)
+            );
             $manager = new \core_question\category_manager();
             // Children first, so every category is empty of subcategories
             // when its turn comes.
@@ -236,8 +255,10 @@ final class purge_questions extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'questionsdeleted' => new external_value(PARAM_INT, 'Questions fully deleted'),
-            'questionshidden' => new external_value(PARAM_INT,
-                'Questions in use by a quiz — hidden instead of deleted (core semantics)'),
+            'questionshidden' => new external_value(
+                PARAM_INT,
+                'Questions in use by a quiz — hidden instead of deleted (core semantics)'
+            ),
             'categoriesdeleted' => new external_value(PARAM_INT, 'Categories deleted'),
             'skippedcategories' => new external_multiple_structure(new external_single_structure([
                 'categoryid' => new external_value(PARAM_INT, 'Category that could not be deleted'),

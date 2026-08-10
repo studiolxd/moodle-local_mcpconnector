@@ -42,10 +42,15 @@ final class authoring_test extends \advanced_testcase {
         $result = create_book::clean_returnvalue(create_book::execute_returns(), $result);
 
         $this->assertCount(3, $result['chapterids']);
-        $rows = array_values($DB->get_records('book_chapters',
-            ['bookid' => $result['instanceid']], 'pagenum ASC'));
-        $this->assertSame(['Introducción', 'Detalle', 'Cierre'],
-            array_map(static fn($r) => $r->title, $rows));
+        $rows = array_values($DB->get_records(
+            'book_chapters',
+            ['bookid' => $result['instanceid']],
+            'pagenum ASC'
+        ));
+        $this->assertSame(
+            ['Introducción', 'Detalle', 'Cierre'],
+            array_map(static fn($r) => $r->title, $rows)
+        );
         $this->assertSame([0, 1, 0], array_map(static fn($r) => (int) $r->subchapter, $rows));
         $this->assertSame([1, 2, 3], array_map(static fn($r) => (int) $r->pagenum, $rows));
 

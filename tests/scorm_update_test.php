@@ -134,10 +134,17 @@ XML;
         $course = $this->getDataGenerator()->create_course();
 
         $draftid = $this->stage_draft($this->make_scorm_zip('Lesson 1', 'ITEM-1'));
-        $created = create_module::add($course, 'scorm', 0, 'SCORM sin grademethod', '', 1,
+        $created = create_module::add(
+            $course,
+            'scorm',
+            0,
+            'SCORM sin grademethod',
+            '',
+            1,
             ['scormtype' => \SCORM_TYPE_LOCAL, 'packagefile' => $draftid, 'packageurl' => '',
                 'updatefreq' => \SCORM_UPDATE_NEVER]
-                + create_scorm::settings_from_params([], get_config('scorm')));
+            + create_scorm::settings_from_params([], get_config('scorm'))
+        );
 
         $scorm = $DB->get_record('scorm', ['id' => $created->instance], '*', MUST_EXIST);
         $this->assertSame((int) \GRADESCOES, (int) $scorm->grademethod);
@@ -150,10 +157,17 @@ XML;
         $course = $this->getDataGenerator()->create_course();
 
         $draftid = $this->stage_draft($this->make_scorm_zip('Lesson 1', 'ITEM-1'));
-        $created = create_module::add($course, 'scorm', 0, 'SCORM con grademethod', '', 1,
+        $created = create_module::add(
+            $course,
+            'scorm',
+            0,
+            'SCORM con grademethod',
+            '',
+            1,
             ['scormtype' => \SCORM_TYPE_LOCAL, 'packagefile' => $draftid, 'packageurl' => '',
                 'updatefreq' => \SCORM_UPDATE_NEVER]
-                + create_scorm::settings_from_params(['grademethod' => \GRADEHIGHEST, 'maxattempt' => 3], get_config('scorm')));
+            + create_scorm::settings_from_params(['grademethod' => \GRADEHIGHEST, 'maxattempt' => 3], get_config('scorm'))
+        );
 
         $scorm = $DB->get_record('scorm', ['id' => $created->instance], '*', MUST_EXIST);
         $this->assertSame((int) \GRADEHIGHEST, (int) $scorm->grademethod);
@@ -164,7 +178,8 @@ XML;
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessageMatches('/grademethod must be one of/');
         create_scorm::validate_settings(['grademethod' => 99] + array_fill_keys(
-            array_keys(create_scorm::settings_parameters()), null
+            array_keys(create_scorm::settings_parameters()),
+            null
         ));
     }
 
@@ -175,10 +190,17 @@ XML;
         $course = $this->getDataGenerator()->create_course();
 
         $draftid = $this->stage_draft($this->make_scorm_zip('Lesson 1', 'ITEM-1'));
-        $created = create_module::add($course, 'scorm', 0, 'Unidad 1', '', 1,
+        $created = create_module::add(
+            $course,
+            'scorm',
+            0,
+            'Unidad 1',
+            '',
+            1,
             ['scormtype' => \SCORM_TYPE_LOCAL, 'packagefile' => $draftid, 'packageurl' => '',
                 'updatefreq' => \SCORM_UPDATE_NEVER]
-                + create_scorm::settings_from_params([], get_config('scorm')));
+            + create_scorm::settings_from_params([], get_config('scorm'))
+        );
         $cmid = (int) $created->coursemodule;
         $instanceid = (int) $created->instance;
 
@@ -199,15 +221,21 @@ XML;
         $after = $DB->get_record('scorm', ['id' => $instanceid], '*', MUST_EXIST);
         $this->assertSame($cmid, (int) $cm->id, 'cmid must not change on package replace');
         $this->assertSame($instanceid, (int) $cm->instance, 'instance must not change on package replace');
-        $this->assertGreaterThan((int) $before->revision, (int) $after->revision,
-            'revision must bump when the manifest is re-parsed');
+        $this->assertGreaterThan(
+            (int) $before->revision,
+            (int) $after->revision,
+            'revision must bump when the manifest is re-parsed'
+        );
         $this->assertNotSame($before->sha1hash, $after->sha1hash, 'sha1hash must change with new content');
         $this->assertSame((int) \GRADEHIGHEST, (int) $after->grademethod, 'settings passed in the same update must apply');
 
         $scoafter = $DB->get_record('scorm_scoes', ['scorm' => $instanceid, 'identifier' => 'ITEM-1'], '*', MUST_EXIST);
-        $this->assertSame((int) $sco->id, (int) $scoafter->id,
+        $this->assertSame(
+            (int) $sco->id,
+            (int) $scoafter->id,
             'a SCO whose manifest identifier is unchanged must keep its id — this is what keeps '
-            . 'scorm_scoes_track (student attempts) attached after replacing the package');
+            . 'scorm_scoes_track (student attempts) attached after replacing the package'
+        );
     }
 
     public function test_update_scorm_rejects_when_nothing_to_update(): void {
@@ -215,10 +243,17 @@ XML;
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $draftid = $this->stage_draft($this->make_scorm_zip('Lesson 1', 'ITEM-1'));
-        $created = create_module::add($course, 'scorm', 0, 'Unidad 1', '', 1,
+        $created = create_module::add(
+            $course,
+            'scorm',
+            0,
+            'Unidad 1',
+            '',
+            1,
             ['scormtype' => \SCORM_TYPE_LOCAL, 'packagefile' => $draftid, 'packageurl' => '',
                 'updatefreq' => \SCORM_UPDATE_NEVER]
-                + create_scorm::settings_from_params([], get_config('scorm')));
+            + create_scorm::settings_from_params([], get_config('scorm'))
+        );
 
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessageMatches('/nothing to update/');
@@ -230,10 +265,17 @@ XML;
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $draftid = $this->stage_draft($this->make_scorm_zip('Lesson 1', 'ITEM-1'));
-        $created = create_module::add($course, 'scorm', 0, 'Unidad 1', '', 1,
+        $created = create_module::add(
+            $course,
+            'scorm',
+            0,
+            'Unidad 1',
+            '',
+            1,
             ['scormtype' => \SCORM_TYPE_LOCAL, 'packagefile' => $draftid, 'packageurl' => '',
                 'updatefreq' => \SCORM_UPDATE_NEVER]
-                + create_scorm::settings_from_params([], get_config('scorm')));
+            + create_scorm::settings_from_params([], get_config('scorm'))
+        );
         $cmid = (int) $created->coursemodule;
 
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');

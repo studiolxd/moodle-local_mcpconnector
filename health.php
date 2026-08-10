@@ -52,7 +52,7 @@ $stryes = get_string('yes');
 $strno = get_string('no');
 $strnever = get_string('never');
 
-// --- Panel connectivity (cached — the license tab owns the live re-check). --
+// Panel connectivity (cached — the license tab owns the live re-check).
 $licensestatus = (string) get_config('local_mcpconnector', 'license_status');
 $checkedat = (int) get_config('local_mcpconnector', 'license_checked_at');
 $lasterror = (string) get_config('local_mcpconnector', 'license_last_error');
@@ -71,15 +71,21 @@ $rows[] = [
 ];
 $rows[] = [get_string('panel_url', 'local_mcpconnector'), s(local_mcpconnector_api_base_url())];
 
-// --- Keys by status (local metadata table). ---------------------------------
+// Keys by status (local metadata table).
 global $DB;
 $keycounts = ['active' => 0, 'suspended' => 0, 'revoked' => 0];
-foreach ($DB->get_records_sql(
-    "SELECT status, COUNT(*) AS c FROM {local_mcpconnector_keys} GROUP BY status") as $row) {
+foreach (
+    $DB->get_records_sql(
+        "SELECT status, COUNT(*) AS c FROM {local_mcpconnector_keys} GROUP BY status"
+    ) as $row
+) {
     $keycounts[$row->status] = (int) $row->c;
 }
-$expired = (int) $DB->count_records_select('local_mcpconnector_keys',
-    "status = 'active' AND expiresat > 0 AND expiresat < ?", [time()]);
+$expired = (int) $DB->count_records_select(
+    'local_mcpconnector_keys',
+    "status = 'active' AND expiresat > 0 AND expiresat < ?",
+    [time()]
+);
 $rows[] = [
     get_string('health_keys', 'local_mcpconnector'),
     get_string('health_keys_detail', 'local_mcpconnector', (object) [
@@ -90,7 +96,7 @@ $rows[] = [
     ]),
 ];
 
-// --- Sync. -------------------------------------------------------------------
+// Sync.
 $task = $DB->get_record('task_scheduled', [
     'component' => 'local_mcpconnector',
     'classname' => '\local_mcpconnector\task\sync_users',
@@ -110,7 +116,7 @@ $rows[] = [
     $autoservices === [] ? $strno : s(implode(', ', $autoservices)),
 ];
 
-// --- Versions. ---------------------------------------------------------------
+// Versions.
 $info = \core_plugin_manager::instance()->get_plugin_info('local_mcpconnector');
 $rows[] = [
     get_string('health_versions', 'local_mcpconnector'),
@@ -119,7 +125,7 @@ $rows[] = [
         . ' · PHP ' . s(PHP_VERSION),
 ];
 
-// --- Telemetry. ----------------------------------------------------------------
+// Telemetry.
 $telemetryon = (int) get_config('local_mcpconnector', 'telemetry_enabled');
 $sentat = (int) get_config('local_mcpconnector', 'telemetry_sent_at');
 $rows[] = [

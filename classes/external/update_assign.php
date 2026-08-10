@@ -47,24 +47,44 @@ final class update_assign extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the assignment', VALUE_REQUIRED),
             'duedate' => new external_value(PARAM_INT, 'Due date (unix timestamp; 0 = none)', VALUE_DEFAULT, null),
-            'allowsubmissionsfromdate' => new external_value(PARAM_INT,
-                'Allow submissions from (timestamp; 0 = always)', VALUE_DEFAULT, null),
+            'allowsubmissionsfromdate' => new external_value(
+                PARAM_INT,
+                'Allow submissions from (timestamp; 0 = always)',
+                VALUE_DEFAULT,
+                null
+            ),
             'cutoffdate' => new external_value(PARAM_INT, 'Cut-off date (timestamp; 0 = none)', VALUE_DEFAULT, null),
             'gradingduedate' => new external_value(PARAM_INT, 'Remind to grade by (timestamp; 0 = none)', VALUE_DEFAULT, null),
             'grade' => new external_value(PARAM_INT, 'Maximum points (positive number)', VALUE_DEFAULT, null),
-            'scaleid' => new external_value(PARAM_INT,
-                'Grade with this scale instead of points (positive scale id)', VALUE_DEFAULT, null),
+            'scaleid' => new external_value(
+                PARAM_INT,
+                'Grade with this scale instead of points (positive scale id)',
+                VALUE_DEFAULT,
+                null
+            ),
             'maxattempts' => new external_value(PARAM_INT, 'Max attempts (-1 = unlimited)', VALUE_DEFAULT, null),
-            'attemptreopenmethod' => new external_value(PARAM_ALPHA,
-                "Reopen attempts: 'none', 'manual' or 'untilpass'", VALUE_DEFAULT, null),
+            'attemptreopenmethod' => new external_value(
+                PARAM_ALPHA,
+                "Reopen attempts: 'none', 'manual' or 'untilpass'",
+                VALUE_DEFAULT,
+                null
+            ),
             'onlinetext' => new external_value(PARAM_INT, 'Online text submissions: 1 on, 0 off', VALUE_DEFAULT, null),
             'file' => new external_value(PARAM_INT, 'File submissions: 1 on, 0 off', VALUE_DEFAULT, null),
             'maxfiles' => new external_value(PARAM_INT, 'Max files per submission', VALUE_DEFAULT, null),
             'maxsizebytes' => new external_value(PARAM_INT, 'Max submission size in bytes (0 = course limit)', VALUE_DEFAULT, null),
-            'submissiondrafts' => new external_value(PARAM_INT,
-                'Require clicking Submit button: 1 yes, 0 no', VALUE_DEFAULT, null),
-            'completionsubmit' => new external_value(PARAM_INT,
-                'Completion rule "student must submit": 1 on, 0 off (switches completion to automatic)', VALUE_DEFAULT, null),
+            'submissiondrafts' => new external_value(
+                PARAM_INT,
+                'Require clicking Submit button: 1 yes, 0 no',
+                VALUE_DEFAULT,
+                null
+            ),
+            'completionsubmit' => new external_value(
+                PARAM_INT,
+                'Completion rule "student must submit": 1 on, 0 off (switches completion to automatic)',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -132,8 +152,10 @@ final class update_assign extends external_api {
         if ($params['grade'] !== null && $params['scaleid'] !== null) {
             \local_mcpconnector\local\reject::because('pass grade (points) OR scaleid, not both');
         }
-        if ($params['attemptreopenmethod'] !== null
-                && !in_array($params['attemptreopenmethod'], ['none', 'manual', 'untilpass'], true)) {
+        if (
+            $params['attemptreopenmethod'] !== null
+                && !in_array($params['attemptreopenmethod'], ['none', 'manual', 'untilpass'], true)
+        ) {
             \local_mcpconnector\local\reject::because("attemptreopenmethod must be 'none', 'manual' or 'untilpass'");
         }
 
@@ -147,9 +169,9 @@ final class update_assign extends external_api {
         $PAGE->set_context($modcontext);
         [$cm, , , $data] = get_moduleinfo_data($cm, $course);
 
-        // get_moduleinfo_data prefills gradepass LOCALE-FORMATTED for the form
-        // ('0,00' in es) — the form undoes it with unformat_float; we must too
-        // or the grade_item update crashes with a DB truncation error.
+        // Above, get_moduleinfo_data prefilled gradepass LOCALE-FORMATTED for the
+        // form ('0,00' in es) — the form undoes it with unformat_float; we must
+        // too, or the grade_item update crashes with a DB truncation error.
         if (isset($data->gradepass)) {
             $data->gradepass = unformat_float($data->gradepass);
         }
@@ -178,8 +200,10 @@ final class update_assign extends external_api {
         $data->assignfeedback_comments_commentinline = (int) ($commentsconfig->get_config('commentinline') ?: 0);
 
         // Apply the requested changes.
-        foreach (['duedate', 'allowsubmissionsfromdate', 'cutoffdate', 'gradingduedate',
-                'maxattempts', 'attemptreopenmethod', 'submissiondrafts'] as $field) {
+        foreach (
+            ['duedate', 'allowsubmissionsfromdate', 'cutoffdate', 'gradingduedate',
+                'maxattempts', 'attemptreopenmethod', 'submissiondrafts'] as $field
+        ) {
             if ($params[$field] !== null) {
                 $data->$field = $params[$field];
             }
@@ -188,7 +212,7 @@ final class update_assign extends external_api {
             $data->grade = abs($params['grade']);
         }
         if ($params['scaleid'] !== null) {
-            // mod_assign encodes a scale as MINUS the scale id.
+            // A scale is encoded by mod_assign as MINUS the scale id.
             $DB->get_record('scale', ['id' => $params['scaleid']], 'id', MUST_EXIST);
             $data->grade = -abs($params['scaleid']);
         }
@@ -205,8 +229,8 @@ final class update_assign extends external_api {
             $data->assignsubmission_file_maxsizebytes = $params['maxsizebytes'];
         }
         if ($params['completionsubmit'] !== null) {
-            // update_moduleinfo only applies completion fields when the form
-            // says they're unlocked; the rule needs automatic tracking.
+            // Completion fields are only applied by update_moduleinfo when the
+            // form says they're unlocked; the rule needs automatic tracking.
             $data->completionunlocked = 1;
             $data->completion = COMPLETION_TRACKING_AUTOMATIC;
             $data->completionsubmit = $params['completionsubmit'] ? 1 : 0;

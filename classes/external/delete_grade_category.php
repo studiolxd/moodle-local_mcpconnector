@@ -76,7 +76,9 @@ final class delete_grade_category extends external_api {
             \local_mcpconnector\local\reject::because("grade category {$categoryid} not found in course {$course->id}");
         }
         if ($category->is_course_category()) {
-            \local_mcpconnector\local\reject::because('refusing to delete the course-level category (it would wipe the whole gradebook tree)');
+            \local_mcpconnector\local\reject::because(
+                'refusing to delete the course-level category (it would wipe the whole gradebook tree)'
+            );
         }
 
         $category->delete('external');

@@ -17,8 +17,14 @@
 /**
  * Service function definitions for MoodleMCP.
  *
- * GENERATED CODE - DO NOT EDIT MANUALLY
- * Run: cd server && npx tsx scripts/export-functions.ts
+ * The per-role whitelists below name Moodle core web service functions only —
+ * the list is derived from core's own service catalog, filtered down to what
+ * each MCP role is allowed to call. It is the Moodle-side half of a pair: the
+ * panel keeps the matching tool catalog, and the two are maintained together
+ * (a function missing from either side is simply not callable).
+ *
+ * Kept as one flat file on purpose: it is long, but a reviewer can read every
+ * function any role can reach without following indirection.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
@@ -27,9 +33,6 @@
 
 /**
  * Returns service definitions with their assigned functions.
- *
- * GENERATED CODE - DO NOT EDIT MANUALLY
- * Run: cd server && npx tsx scripts/export-functions.ts
  *
  * @return array Service definitions
  */

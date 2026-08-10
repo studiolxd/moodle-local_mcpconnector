@@ -46,16 +46,30 @@ final class update_grade_category extends external_api {
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_REQUIRED),
             'categoryid' => new external_value(PARAM_INT, 'Grade category id', VALUE_REQUIRED),
             'name' => new external_value(PARAM_TEXT, 'New category name', VALUE_DEFAULT, null),
-            'aggregation' => new external_value(PARAM_INT,
+            'aggregation' => new external_value(
+                PARAM_INT,
                 'Aggregation method (0 mean, 2 median, 4 min, 6 max, 8 mode, 10 weighted mean, 13 natural)',
-                VALUE_DEFAULT, null),
-            'aggregateonlygraded' => new external_value(PARAM_INT,
-                'Exclude empty grades: 1 yes, 0 no (0 = ungraded items count as 0)', VALUE_DEFAULT, null),
-            'scaleid' => new external_value(PARAM_INT,
-                'Show the CATEGORY TOTAL with this scale (sets gradetype to scale)', VALUE_DEFAULT, null),
-            'gradepass' => new external_value(PARAM_FLOAT,
+                VALUE_DEFAULT,
+                null
+            ),
+            'aggregateonlygraded' => new external_value(
+                PARAM_INT,
+                'Exclude empty grades: 1 yes, 0 no (0 = ungraded items count as 0)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'scaleid' => new external_value(
+                PARAM_INT,
+                'Show the CATEGORY TOTAL with this scale (sets gradetype to scale)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'gradepass' => new external_value(
+                PARAM_FLOAT,
                 'Grade to pass on the category total (with a scale: the 1-based value, e.g. 2)',
-                VALUE_DEFAULT, null),
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 

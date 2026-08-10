@@ -1,5 +1,7 @@
 # MCP Connector for Moodle (local_mcpconnector)
 
+[![Moodle Plugin CI](https://github.com/studiolxd/moodle-local_mcpconnector/actions/workflows/moodle-plugin-ci.yml/badge.svg)](https://github.com/studiolxd/moodle-local_mcpconnector/actions/workflows/moodle-plugin-ci.yml)
+
 Connect your Moodle site to AI assistants (Claude, and any client that speaks
 the [Model Context Protocol](https://modelcontextprotocol.io)) through the
 [MoodleMCP](https://moodlemcp.com) panel. The plugin provisions role-scoped

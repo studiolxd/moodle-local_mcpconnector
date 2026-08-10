@@ -59,9 +59,12 @@ final class update_scorm extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the SCORM to update', VALUE_REQUIRED),
-            'packageurl' => new external_value(PARAM_URL,
+            'packageurl' => new external_value(
+                PARAM_URL,
                 'HTTPS URL of the replacement SCORM .zip package. Omit to leave the current package untouched.',
-                VALUE_DEFAULT, null),
+                VALUE_DEFAULT,
+                null
+            ),
         ] + create_scorm::settings_parameters());
     }
 

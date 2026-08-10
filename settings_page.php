@@ -205,8 +205,13 @@ echo html_writer::tag('h4', get_string('telemetry_section', 'local_mcpconnector'
 echo html_writer::start_div('form-item row mb-3');
 echo html_writer::start_div('col-md-9 offset-md-3');
 echo html_writer::start_div('form-check');
-echo html_writer::checkbox('telemetry_enabled', 1, $telemetryenabled == 1, '',
-    ['class' => 'form-check-input', 'id' => 'id_telemetry_enabled']);
+echo html_writer::checkbox(
+    'telemetry_enabled',
+    1,
+    $telemetryenabled == 1,
+    '',
+    ['class' => 'form-check-input', 'id' => 'id_telemetry_enabled']
+);
 echo html_writer::tag(
     'label',
     get_string('telemetry_enabled', 'local_mcpconnector'),

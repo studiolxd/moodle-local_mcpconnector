@@ -41,7 +41,9 @@ $functions = [
     'local_mcpconnector_create_module' => [
         'classname'    => 'local_mcpconnector\external\create_module',
         'methodname'   => 'execute',
-        'description'  => 'Create an activity module (forum, assign, …) in a course section with sensible defaults. Unlike core_courseformat_new_module it is not limited to quick-create modules.',
+        'description'  => 'Create an activity module (forum, assign, …) in a course section with '
+            . 'sensible defaults. Unlike core_courseformat_new_module it is not limited to '
+            . 'quick-create modules.',
         'type'         => 'write',
         'capabilities' => 'moodle/course:manageactivities',
         'ajax'         => false,
@@ -145,7 +147,8 @@ $functions = [
     'local_mcpconnector_update_grade_category' => [
         'classname'    => 'local_mcpconnector\external\update_grade_category',
         'methodname'   => 'execute',
-        'description'  => "Update a grade category: rename, aggregation, empty-grade handling, and its total's scale/grade-to-pass.",
+        'description'  => 'Update a grade category: rename, aggregation, empty-grade handling, '
+            . "and its total's scale/grade-to-pass.",
         'type'         => 'write',
         'capabilities' => 'moodle/grade:manage',
         'ajax'         => false,

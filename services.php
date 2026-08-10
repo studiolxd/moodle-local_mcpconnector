@@ -107,8 +107,11 @@ if ($action === 'deprovision' && confirm_sesskey()) {
     if (!$result['panel']['ok']) {
         redirect(
             $PAGE->url,
-            get_string('deprovision_panel_warning', 'local_mcpconnector',
-                local_mcpconnector_panel_error_message((string) ($result['panel']['error'] ?? ''))),
+            get_string(
+                'deprovision_panel_warning',
+                'local_mcpconnector',
+                local_mcpconnector_panel_error_message((string) ($result['panel']['error'] ?? ''))
+            ),
             null,
             \core\output\notification::NOTIFY_WARNING
         );

@@ -44,8 +44,12 @@ final class deprovision_resources_test extends \advanced_testcase {
         require_once($CFG->dirroot . '/local/mcpconnector/db/service_functions.php');
 
         local_mcpconnector_ensure_services();
-        $serviceid = (int) $DB->get_field('external_services', 'id',
-            ['shortname' => 'mcpconnector_teacher'], MUST_EXIST);
+        $serviceid = (int) $DB->get_field(
+            'external_services',
+            'id',
+            ['shortname' => 'mcpconnector_teacher'],
+            MUST_EXIST
+        );
 
         $DB->insert_record('external_services_users', (object) [
             'externalserviceid' => $serviceid,

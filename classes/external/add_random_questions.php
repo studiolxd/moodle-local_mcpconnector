@@ -45,8 +45,12 @@ final class add_random_questions extends external_api {
             'cmid' => new external_value(PARAM_INT, 'Course module id of the QUIZ', VALUE_REQUIRED),
             'count' => new external_value(PARAM_INT, 'How many random questions to add', VALUE_REQUIRED),
             'categoryid' => new external_value(PARAM_INT, 'Question category id to draw from', VALUE_REQUIRED),
-            'includesubcategories' => new external_value(PARAM_INT,
-                'Also draw from subcategories: 1 yes (default), 0 no', VALUE_DEFAULT, 1),
+            'includesubcategories' => new external_value(
+                PARAM_INT,
+                'Also draw from subcategories: 1 yes (default), 0 no',
+                VALUE_DEFAULT,
+                1
+            ),
             'page' => new external_value(PARAM_INT, 'Quiz page to add to (0 = at the end, default)', VALUE_DEFAULT, 0),
         ]);
     }

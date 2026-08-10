@@ -41,8 +41,12 @@ final class recalculate_user_key_test extends \advanced_testcase {
         require_once($CFG->dirroot . '/local/mcpconnector/db/service_functions.php');
 
         local_mcpconnector_ensure_services();
-        $serviceid = (int) $DB->get_field('external_services', 'id',
-            ['shortname' => 'mcpconnector_teacher'], MUST_EXIST);
+        $serviceid = (int) $DB->get_field(
+            'external_services',
+            'id',
+            ['shortname' => 'mcpconnector_teacher'],
+            MUST_EXIST
+        );
 
         $DB->insert_record('external_services_users', (object) [
             'externalserviceid' => $serviceid,
@@ -73,7 +77,7 @@ final class recalculate_user_key_test extends \advanced_testcase {
 
         $result = local_mcpconnector_recalculate_user_key((int) $user->id);
 
-        // ok with no error = the fast path: nothing changed, key preserved.
+        // Ok with no error = the fast path: nothing changed, key preserved.
         // (Any panel path would fail loudly here — no panel secret configured.)
         $this->assertTrue($result['ok']);
         $this->assertNull($result['error']);
@@ -93,8 +97,10 @@ final class recalculate_user_key_test extends \advanced_testcase {
 
         // Remove the service assignment and the local key row (already
         // revoked upstream); only the token remains to be cleaned.
-        $DB->delete_records('external_services_users',
-            ['userid' => $user->id, 'externalserviceid' => $serviceid]);
+        $DB->delete_records(
+            'external_services_users',
+            ['userid' => $user->id, 'externalserviceid' => $serviceid]
+        );
         $DB->delete_records('local_mcpconnector_keys', ['userid' => $user->id]);
 
         $result = local_mcpconnector_recalculate_user_key((int) $user->id);

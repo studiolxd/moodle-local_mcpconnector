@@ -41,10 +41,17 @@ final class backup_course extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id to back up', VALUE_REQUIRED),
-            'uploadurl' => new external_value(PARAM_RAW,
-                'Presigned HTTPS PUT URL for the .mbz (moodle_request_file_upload mints one)', VALUE_REQUIRED),
-            'includeusers' => new external_value(PARAM_INT,
-                'Include user data (enrolments, completion, grades): 1 yes, 0 no (default)', VALUE_DEFAULT, 0),
+            'uploadurl' => new external_value(
+                PARAM_RAW,
+                'Presigned HTTPS PUT URL for the .mbz (moodle_request_file_upload mints one)',
+                VALUE_REQUIRED
+            ),
+            'includeusers' => new external_value(
+                PARAM_INT,
+                'Include user data (enrolments, completion, grades): 1 yes, 0 no (default)',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 
@@ -134,7 +141,12 @@ final class backup_course extends external_api {
                 $plan->get_setting('anonymize')->set_value(0);
             }
             $filename = \backup_plan_dbops::get_default_backup_filename(
-                \backup::FORMAT_MOODLE, \backup::TYPE_1COURSE, $courseid, $includeusers, false);
+                \backup::FORMAT_MOODLE,
+                \backup::TYPE_1COURSE,
+                $courseid,
+                $includeusers,
+                false
+            );
             if ($plan->setting_exists('filename')) {
                 $plan->get_setting('filename')->set_value($filename);
             }

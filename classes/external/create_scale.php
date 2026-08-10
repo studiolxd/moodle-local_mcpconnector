@@ -43,8 +43,11 @@ final class create_scale extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course the scale belongs to', VALUE_REQUIRED),
             'name' => new external_value(PARAM_TEXT, 'Scale name (e.g. "Apto / No Apto")', VALUE_REQUIRED),
-            'scale' => new external_value(PARAM_TEXT,
-                'Comma-separated values, WORST FIRST (e.g. "No Apto,Apto")', VALUE_REQUIRED),
+            'scale' => new external_value(
+                PARAM_TEXT,
+                'Comma-separated values, WORST FIRST (e.g. "No Apto,Apto")',
+                VALUE_REQUIRED
+            ),
             'description' => new external_value(PARAM_RAW, 'Description (HTML)', VALUE_DEFAULT, ''),
         ]);
     }

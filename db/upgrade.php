@@ -135,18 +135,22 @@ function xmldb_local_mcpconnector_upgrade($oldversion) {
         // — which globally invalidated all MCP keys after installing 2.3.
         //
         // 1. Detach any surviving services from the component so the sync
-        //    never touches them again (custom services are ignored).
-        $DB->set_field('external_services', 'component', null,
-            ['component' => 'local_mcpconnector']);
+        // never touches them again (custom services are ignored).
+        $DB->set_field(
+            'external_services',
+            'component',
+            null,
+            ['component' => 'local_mcpconnector']
+        );
 
         // 2. Recreate the services the 2.3 upgrade deleted (now detached).
         local_mcpconnector_ensure_services();
 
         // 3. Register this plugin's external functions NOW (upgrade.php runs
-        //    BEFORE Moodle's own external_update_descriptions, so on the 2.3
-        //    upgrade the new functions were skipped by the whitelist sync).
-        //    Safe to call here: with no component-owned services left, its
-        //    deletion branch is a no-op.
+        // BEFORE Moodle's own external_update_descriptions, so on the 2.3
+        // upgrade the new functions were skipped by the whitelist sync).
+        // Safe to call here: with no component-owned services left, its
+        // deletion branch is a no-op.
         require_once($CFG->libdir . '/upgradelib.php');
         external_update_descriptions('local_mcpconnector');
 

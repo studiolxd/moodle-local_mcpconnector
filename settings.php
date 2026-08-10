@@ -28,13 +28,13 @@ defined('MOODLE_INTERNAL') || die();
 // (e.g. a manager) see the category and pages in the admin tree.
 $managecap = 'local/mcpconnector:manage';
 if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
-    // Categoría "Moodle MCP" (título sin link).
+    // The 'Moodle MCP' category — a heading, so it carries no link of its own.
     $ADMIN->add('localplugins', new admin_category(
         'local_mcpconnector_category',
         get_string('pluginname', 'local_mcpconnector')
     ));
 
-    // Licencia.
+    // License.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector',
         get_string('tab_license', 'local_mcpconnector'),
@@ -74,7 +74,7 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
-    // Configuración.
+    // Settings.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_settings',
         get_string('tab_settings', 'local_mcpconnector'),

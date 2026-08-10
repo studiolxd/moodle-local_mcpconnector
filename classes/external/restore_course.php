@@ -40,14 +40,28 @@ final class restore_course extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'fileurl' => new external_value(PARAM_RAW,
-                'HTTPS URL of the .mbz (the fileUrl from backup_course, or any public link)', VALUE_REQUIRED),
-            'categoryid' => new external_value(PARAM_INT,
-                'Course category to create the new course in', VALUE_REQUIRED),
-            'fullname' => new external_value(PARAM_TEXT,
-                'New course full name (default: the one inside the backup)', VALUE_DEFAULT, ''),
-            'shortname' => new external_value(PARAM_TEXT,
-                'New course short name (default: derived from the backup, deduplicated)', VALUE_DEFAULT, ''),
+            'fileurl' => new external_value(
+                PARAM_RAW,
+                'HTTPS URL of the .mbz (the fileUrl from backup_course, or any public link)',
+                VALUE_REQUIRED
+            ),
+            'categoryid' => new external_value(
+                PARAM_INT,
+                'Course category to create the new course in',
+                VALUE_REQUIRED
+            ),
+            'fullname' => new external_value(
+                PARAM_TEXT,
+                'New course full name (default: the one inside the backup)',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'shortname' => new external_value(
+                PARAM_TEXT,
+                'New course short name (default: derived from the backup, deduplicated)',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 

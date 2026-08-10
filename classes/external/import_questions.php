@@ -51,25 +51,57 @@ final class import_questions extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT,
-                'Course module id of the target QUIZ or QBANK (shared question bank)', VALUE_DEFAULT, null),
-            'courseid' => new external_value(PARAM_INT,
-                "Alternative to cmid: import into the COURSE's question bank (created if missing)", VALUE_DEFAULT, null),
+            'cmid' => new external_value(
+                PARAM_INT,
+                'Course module id of the target QUIZ or QBANK (shared question bank)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'courseid' => new external_value(
+                PARAM_INT,
+                "Alternative to cmid: import into the COURSE's question bank (created if missing)",
+                VALUE_DEFAULT,
+                null
+            ),
             'format' => new external_value(PARAM_ALPHA, "Question format: 'gift', 'aiken' or 'xml'", VALUE_REQUIRED),
-            'questions' => new external_value(PARAM_RAW,
-                'The questions as text in the given format (preferred for these text formats)', VALUE_DEFAULT, null),
-            'fileurl' => new external_value(PARAM_URL,
-                'Alternative to questions: HTTPS URL of the file to import', VALUE_DEFAULT, null),
-            'addtoquiz' => new external_value(PARAM_INT,
+            'questions' => new external_value(
+                PARAM_RAW,
+                'The questions as text in the given format (preferred for these text formats)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'fileurl' => new external_value(
+                PARAM_URL,
+                'Alternative to questions: HTTPS URL of the file to import',
+                VALUE_DEFAULT,
+                null
+            ),
+            'addtoquiz' => new external_value(
+                PARAM_INT,
                 'When the target is a quiz: append the imported questions to it, 1 yes (default), 0 bank only. '
-                . 'Ignored for qbank/course targets', VALUE_DEFAULT, 1),
-            'matchgrades' => new external_value(PARAM_ALPHA,
-                "Non-standard grades: 'error' (default, reject) or 'nearest'", VALUE_DEFAULT, 'error'),
-            'stoponerror' => new external_value(PARAM_INT,
-                'Abort on first parse error: 1 yes (default), 0 import the valid ones', VALUE_DEFAULT, 1),
-            'category' => new external_value(PARAM_RAW,
+                . 'Ignored for qbank/course targets',
+                VALUE_DEFAULT,
+                1
+            ),
+            'matchgrades' => new external_value(
+                PARAM_ALPHA,
+                "Non-standard grades: 'error' (default, reject) or 'nearest'",
+                VALUE_DEFAULT,
+                'error'
+            ),
+            'stoponerror' => new external_value(
+                PARAM_INT,
+                'Abort on first parse error: 1 yes (default), 0 import the valid ones',
+                VALUE_DEFAULT,
+                1
+            ),
+            'category' => new external_value(
+                PARAM_RAW,
                 "Category path or name inside the target bank (created if missing): '/'-separated, "
-                . "e.g. 'top/INAD0011/Módulo 1' ('top/' optional; '//' escapes a literal slash)", VALUE_DEFAULT, null),
+                . "e.g. 'top/INAD0011/Módulo 1' ('top/' optional; '//' escapes a literal slash)",
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -232,8 +264,13 @@ final class import_questions extends external_api {
                 $notices = trim(html_to_text(ob_get_clean() ?: '', 0, false));
             }
             if (!$ok) {
-                throw new \moodle_exception('cannotimport', 'question', '', null,
-                    $notices !== '' ? \core_text::substr($notices, 0, 1000) : 'import failed');
+                throw new \moodle_exception(
+                    'cannotimport',
+                    'question',
+                    '',
+                    null,
+                    $notices !== '' ? \core_text::substr($notices, 0, 1000) : 'import failed'
+                );
             }
 
             $questionids = array_map('intval', $qformat->questionids);
@@ -277,8 +314,10 @@ final class import_questions extends external_api {
                 new external_value(PARAM_INT, 'Question id'),
                 'Ids of the imported questions'
             ),
-            'categoryid' => new external_value(PARAM_INT,
-                'Question category the questions landed in (usable with add_random_questions)'),
+            'categoryid' => new external_value(
+                PARAM_INT,
+                'Question category the questions landed in (usable with add_random_questions)'
+            ),
             'cmid' => new external_value(PARAM_INT, 'Course module id of the target quiz/bank'),
         ]);
     }

@@ -105,8 +105,10 @@ final class get_grade_categories extends external_api {
                 'name' => new external_value(PARAM_TEXT, 'Category name'),
                 'parentid' => new external_value(PARAM_INT, 'Parent category id (0 = none/course level)'),
                 'iscoursecategory' => new external_value(PARAM_BOOL, 'Whether this is the course-level root'),
-                'aggregation' => new external_value(PARAM_INT,
-                    'Aggregation (0 mean, 2 median, 4 min, 6 max, 8 mode, 10 weighted mean, 13 natural)'),
+                'aggregation' => new external_value(
+                    PARAM_INT,
+                    'Aggregation (0 mean, 2 median, 4 min, 6 max, 8 mode, 10 weighted mean, 13 natural)'
+                ),
                 'aggregateonlygraded' => new external_value(PARAM_INT, '1 excludes empty grades; 0 counts them as 0'),
                 'itemcount' => new external_value(PARAM_INT, 'Grade items directly in the category'),
                 'total' => new external_single_structure([

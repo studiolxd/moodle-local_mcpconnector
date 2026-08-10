@@ -49,13 +49,25 @@ final class update_section extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_REQUIRED),
             'sectionnum' => new external_value(PARAM_INT, 'Section NUMBER (0 = General)', VALUE_REQUIRED),
-            'name' => new external_value(PARAM_TEXT,
+            'name' => new external_value(
+                PARAM_TEXT,
                 "New section name. Empty string restores the course format's default "
-                . "('Topic N'/'Week N').", VALUE_DEFAULT, null),
-            'summary' => new external_value(PARAM_RAW, 'New section summary/description, as HTML',
-                VALUE_DEFAULT, null),
-            'summaryformat' => new external_value(PARAM_INT, 'Format of summary (1 = HTML, default)',
-                VALUE_DEFAULT, null),
+                . "('Topic N'/'Week N').",
+                VALUE_DEFAULT,
+                null
+            ),
+            'summary' => new external_value(
+                PARAM_RAW,
+                'New section summary/description, as HTML',
+                VALUE_DEFAULT,
+                null
+            ),
+            'summaryformat' => new external_value(
+                PARAM_INT,
+                'Format of summary (1 = HTML, default)',
+                VALUE_DEFAULT,
+                null
+            ),
             'visible' => new external_value(PARAM_INT, 'Visibility: 1 visible, 0 hidden', VALUE_DEFAULT, null),
         ]);
     }

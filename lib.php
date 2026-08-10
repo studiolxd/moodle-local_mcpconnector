@@ -85,7 +85,7 @@ function local_mcpconnector_verify_oauth_state(string $state, string $panelsecre
         return false;
     }
 
-    // base64url decode (PHP base64_decode tolerates missing padding).
+    // Base64url decode (PHP base64_decode tolerates missing padding).
     $json = base64_decode(strtr($body, '-_', '+/'), true);
     if ($json === false) {
         return false;
@@ -1859,12 +1859,16 @@ function local_mcpconnector_send_telemetry(bool $force = false): array {
     $info = \core_plugin_manager::instance()->get_plugin_info('local_mcpconnector');
     $keys = ['active' => 0, 'suspended' => 0, 'revoked' => 0];
     $counts = $DB->get_records_sql(
-        "SELECT status, COUNT(*) AS c FROM {local_mcpconnector_keys} GROUP BY status");
+        "SELECT status, COUNT(*) AS c FROM {local_mcpconnector_keys} GROUP BY status"
+    );
     foreach ($counts as $row) {
         $keys[$row->status] = (int) $row->c;
     }
-    $keys['expired'] = (int) $DB->count_records_select('local_mcpconnector_keys',
-        "status = 'active' AND expiresat > 0 AND expiresat < ?", [time()]);
+    $keys['expired'] = (int) $DB->count_records_select(
+        'local_mcpconnector_keys',
+        "status = 'active' AND expiresat > 0 AND expiresat < ?",
+        [time()]
+    );
 
     $autosync = false;
     foreach (['admin', 'manager', 'editingteacher', 'teacher', 'student', 'user'] as $service) {

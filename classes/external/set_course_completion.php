@@ -49,14 +49,27 @@ final class set_course_completion extends external_api {
             'cmids' => new external_multiple_structure(
                 new external_value(PARAM_INT, 'Course module id'),
                 'Activities required for completion; empty/omitted = ALL activities with completion tracking configured',
-                VALUE_DEFAULT, []
+                VALUE_DEFAULT,
+                []
             ),
-            'gradepass' => new external_value(PARAM_FLOAT,
-                'Also require reaching this course grade (omit for no grade criterion)', VALUE_DEFAULT, null),
-            'overallaggregation' => new external_value(PARAM_ALPHA,
-                "Between criteria groups: 'all' (default) or 'any'", VALUE_DEFAULT, 'all'),
-            'activityaggregation' => new external_value(PARAM_ALPHA,
-                "Between the listed activities: 'all' (default) or 'any'", VALUE_DEFAULT, 'all'),
+            'gradepass' => new external_value(
+                PARAM_FLOAT,
+                'Also require reaching this course grade (omit for no grade criterion)',
+                VALUE_DEFAULT,
+                null
+            ),
+            'overallaggregation' => new external_value(
+                PARAM_ALPHA,
+                "Between criteria groups: 'all' (default) or 'any'",
+                VALUE_DEFAULT,
+                'all'
+            ),
+            'activityaggregation' => new external_value(
+                PARAM_ALPHA,
+                "Between the listed activities: 'all' (default) or 'any'",
+                VALUE_DEFAULT,
+                'all'
+            ),
         ]);
     }
 
@@ -111,8 +124,13 @@ final class set_course_completion extends external_api {
         require_capability('moodle/course:update', $coursecontext);
 
         if (empty($CFG->enablecompletion)) {
-            throw new \moodle_exception('completionnotenabled', 'completion', '', null,
-                'completion tracking is disabled site-wide (Site administration > Advanced features)');
+            throw new \moodle_exception(
+                'completionnotenabled',
+                'completion',
+                '',
+                null,
+                'completion tracking is disabled site-wide (Site administration > Advanced features)'
+            );
         }
 
         // Course-level completion tracking must be on for criteria to apply.
@@ -123,8 +141,13 @@ final class set_course_completion extends external_api {
 
         // Resolve the activity set: explicit cmids, or every tracked activity.
         if ($cmids === []) {
-            $cmids = array_keys($DB->get_records_select('course_modules',
-                'course = ? AND completion > 0 AND deletioninprogress = 0', [$course->id], 'id', 'id'));
+            $cmids = array_keys($DB->get_records_select(
+                'course_modules',
+                'course = ? AND completion > 0 AND deletioninprogress = 0',
+                [$course->id],
+                'id',
+                'id'
+            ));
         } else {
             foreach ($cmids as $cmid) {
                 $cm = $DB->get_record('course_modules', ['id' => $cmid], '*', MUST_EXIST);
@@ -132,12 +155,17 @@ final class set_course_completion extends external_api {
                     \local_mcpconnector\local\reject::because("cmid {$cmid} is not in course {$course->id}");
                 }
                 if ((int) $cm->completion === COMPLETION_TRACKING_NONE) {
-                    \local_mcpconnector\local\reject::because("cmid {$cmid} has no completion tracking configured — set it first with local_mcpconnector_update_module");
+                    \local_mcpconnector\local\reject::because(
+                        "cmid {$cmid} has no completion tracking configured — "
+                        . 'set it first with local_mcpconnector_update_module'
+                    );
                 }
             }
         }
         if ($cmids === [] && $gradepass === null) {
-            \local_mcpconnector\local\reject::because('nothing to require: no tracked activities in the course and no gradepass given');
+            \local_mcpconnector\local\reject::because(
+                'nothing to require: no tracked activities in the course and no gradepass given'
+            );
         }
 
         // Mirror course/completion.php's save sequence (it clears ALL previous
@@ -153,8 +181,14 @@ final class set_course_completion extends external_api {
             $data->criteria_grade_value = $gradepass;
         }
 
+        // Core declares this global in uppercase (lib/completionlib.php), so the
+        // naming sniff has to be waived rather than the variable renamed.
+        // phpcs:disable moodle.NamingConventions.ValidVariableName.VariableNameLowerCase
+        // phpcs:disable moodle.NamingConventions.ValidVariableName.VariableNameUnderscore
         global $COMPLETION_CRITERIA_TYPES;
         foreach ($COMPLETION_CRITERIA_TYPES as $type) {
+            // phpcs:enable moodle.NamingConventions.ValidVariableName.VariableNameLowerCase
+            // phpcs:enable moodle.NamingConventions.ValidVariableName.VariableNameUnderscore
             $class = 'completion_criteria_' . $type;
             $criterion = new $class();
             $criterion->update_config($data);
@@ -165,9 +199,11 @@ final class set_course_completion extends external_api {
         $aggregation->setMethod($aggmap[$overallaggregation]);
         $aggregation->save();
 
-        foreach ([COMPLETION_CRITERIA_TYPE_ACTIVITY => $aggmap[$activityaggregation],
+        foreach (
+            [COMPLETION_CRITERIA_TYPE_ACTIVITY => $aggmap[$activityaggregation],
                 COMPLETION_CRITERIA_TYPE_COURSE => COMPLETION_AGGREGATION_ALL,
-                COMPLETION_CRITERIA_TYPE_ROLE => COMPLETION_AGGREGATION_ALL] as $criteriatype => $method) {
+                COMPLETION_CRITERIA_TYPE_ROLE => COMPLETION_AGGREGATION_ALL] as $criteriatype => $method
+        ) {
             $aggdata['criteriatype'] = $criteriatype;
             $aggregation = new \completion_aggregation($aggdata);
             $aggregation->setMethod($method);

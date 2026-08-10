@@ -39,10 +39,18 @@ final class add_to_content_bank extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'fileurl' => new external_value(PARAM_URL, 'HTTPS URL of the file (e.g. an .h5p)', VALUE_REQUIRED),
-            'courseid' => new external_value(PARAM_INT,
-                'Course whose content bank receives it (omit = site content bank)', VALUE_DEFAULT, 0),
-            'name' => new external_value(PARAM_TEXT,
-                'Content name (default: the file name)', VALUE_DEFAULT, ''),
+            'courseid' => new external_value(
+                PARAM_INT,
+                'Course whose content bank receives it (omit = site content bank)',
+                VALUE_DEFAULT,
+                0
+            ),
+            'name' => new external_value(
+                PARAM_TEXT,
+                'Content name (default: the file name)',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 
@@ -84,7 +92,13 @@ final class add_to_content_bank extends external_api {
         $draftitemid = \local_mcpconnector\local\url_file::fetch_to_draft($fileurl, $filename, 'content.h5p');
         $usercontext = \context_user::instance($USER->id);
         $files = get_file_storage()->get_area_files(
-            $usercontext->id, 'user', 'draft', $draftitemid, 'id', false);
+            $usercontext->id,
+            'user',
+            'draft',
+            $draftitemid,
+            'id',
+            false
+        );
         $file = reset($files);
         if (!$file) {
             \local_mcpconnector\local\reject::because('the download produced no file');
