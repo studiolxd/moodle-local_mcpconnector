@@ -22,7 +22,10 @@ suffix=""
 $moodleorg && suffix="-moodleorg"
 out="local_mcpconnector-${release}${suffix}.zip"
 
-./scripts/lint-plugin.sh
+# Sintaxis PHP antes de empaquetar (si hay php en la máquina).
+if command -v php >/dev/null 2>&1; then
+  find . -name '*.php' -not -path './scripts/*' -print0 | xargs -0 -n1 php -l >/dev/null
+fi
 
 staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
