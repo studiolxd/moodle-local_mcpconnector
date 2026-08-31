@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event observers for SLXD.
+ * Event observers for Studio LXD.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD

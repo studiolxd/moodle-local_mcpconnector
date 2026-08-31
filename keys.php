@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Keys management page for SLXD.
+ * Keys management page for Studio LXD.
  *
  * Lists keys from the LOCAL metadata table (panel API v2 never returns key
  * values or tokens); a "Refresh from panel" action reconciles statuses.

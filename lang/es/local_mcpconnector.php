@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Spanish language pack for SLXD
+ * Spanish language pack for Studio LXD
  *
  * @package    local_mcpconnector
  * @category   string
@@ -25,9 +25,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['adminpage'] = 'SLXD';
+$string['adminpage'] = 'Studio LXD';
 $string['auto_email'] = 'Enviar claves MCP automáticamente por email';
-$string['auto_email_desc'] = 'Cuando está habilitado, SLXD envía las claves la primera vez que se crean.';
+$string['auto_email_desc'] = 'Cuando está habilitado, Studio LXD envía las claves la primera vez que se crean.';
 $string['auto_sync_admin'] = 'Sincronización automática de admins';
 $string['auto_sync_admin_desc'] = 'Sincronizar automáticamente cuando se asigna o quita el rol de administrador del sitio.';
 $string['auto_sync_editingteacher'] = 'Sincronización automática de editingteachers';
@@ -43,14 +43,14 @@ $string['auto_sync_user'] = 'Sincronización automática de usuarios';
 $string['auto_sync_user_desc'] = 'Sincronizar automáticamente cuando se crea un nuevo usuario en la plataforma.';
 $string['changes_saved'] = 'Cambios guardados.';
 $string['deprovision'] = 'Desprovisionar';
-$string['deprovision_confirm'] = 'Esto revocará todas las claves MCP en el panel y eliminará permanentemente todos los servicios, tokens y autorizaciones de usuario creados por SLXD. Esta acción no se puede deshacer. ¿Continuar?';
+$string['deprovision_confirm'] = 'Esto revocará todas las claves MCP en el panel y eliminará permanentemente todos los servicios, tokens y autorizaciones de usuario creados por Studio LXD. Esta acción no se puede deshacer. ¿Continuar?';
 $string['deprovision_help'] = 'Revoca todas las claves MCP en el panel y elimina todos los servicios, tokens y autorizaciones creados por este plugin en Moodle. La licencia y la conexión con el panel se conservan, para que el plugin pueda volver a autoaprovisionarse después.';
 $string['deprovision_panel_warning'] = 'Se eliminaron los servicios y tokens en Moodle, pero el panel no pudo confirmar la revocación de las claves: {$a}. Revísalo manualmente en el panel.';
 $string['deprovision_success'] = 'Desprovisión completada: se eliminaron {$a} servicio(s) y se revocaron todas las claves del panel.';
 $string['editfunctions'] = 'Editar funciones';
 $string['email_body'] = 'Cuerpo del email';
 $string['email_body_default'] = 'Hola, {$a->firstname}:' . "\n\n" .
-    'Tu acceso a SLXD está listo. Hay dos formas de conectar tu asistente de IA:' . "\n\n" .
+    'Tu acceso a Studio LXD está listo. Hay dos formas de conectar tu asistente de IA:' . "\n\n" .
     '1) Claude Desktop o ChatGPT (recomendado): añade un conector con esta URL e inicia sesión con tu Moodle cuando te lo pida — NO necesitas la clave de abajo:' . "\n" .
     '   {$a->mcpurl}' . "\n\n" .
     '2) Herramientas que aceptan un token (Cursor, scripts, CLI): usa la URL de arriba y envía esta clave como cabecera  Authorization: Bearer <clave>' . "\n" .
@@ -60,7 +60,7 @@ $string['email_body_default'] = 'Hola, {$a->firstname}:' . "\n\n" .
 $string['email_body_desc'] = 'Plantilla del cuerpo del email con la clave MCP. Placeholders: {$a->firstname}, {$a->lastname}, {$a->username}, {$a->email}, {$a->mcpkey}, {$a->mcpurl} (el endpoint MCP), {$a->docsurl} (la guía de conexión).';
 $string['email_section'] = 'Envío de claves por email';
 $string['email_subject'] = 'Asunto del email';
-$string['email_subject_default'] = 'Tu acceso a SLXD';
+$string['email_subject_default'] = 'Tu acceso a Studio LXD';
 $string['email_subject_desc'] = 'Asunto del email con la clave MCP.';
 $string['errordetail'] = '{$a}';
 $string['existing_users'] = 'Usuarios existentes';
@@ -121,7 +121,7 @@ $string['license_help'] = 'Introduce tu clave de licencia y valídala.';
 $string['license_label'] = 'Clave de licencia';
 $string['license_ok'] = 'Licencia verificada.';
 $string['license_recheck'] = 'Verificar ahora';
-$string['license_required'] = 'Se requiere una licencia válida para activar SLXD.';
+$string['license_required'] = 'Se requiere una licencia válida para activar Studio LXD.';
 $string['license_save'] = 'Validar licencia';
 $string['license_status_error'] = 'Incorrecta';
 $string['license_status_label'] = 'Estado de licencia: {$a}';
@@ -150,7 +150,7 @@ $string['panel_secret'] = 'Secreto del panel';
 $string['panel_secret_help'] = 'Secreto compartido con el que se firma cada petición que el plugin envía al panel.';
 $string['panel_secret_missing'] = 'El secreto del panel no está configurado. Introduce el par clave de licencia + secreto emitido por tu panel.';
 $string['panel_url'] = 'URL del panel';
-$string['panel_url_help'] = 'URL base de tu panel SLXD, p. ej. https://slxd.app.';
+$string['panel_url_help'] = 'URL base de tu panel Studio LXD, p. ej. https://lmsmcp.slxd.app.';
 $string['pluginname'] = 'MCP Connector for Moodle';
 
 
@@ -162,7 +162,7 @@ $string['privacy:metadata:localkeys:roles'] = 'Los roles de Moodle con los que p
 $string['privacy:metadata:localkeys:sentat'] = 'Cuándo se envió la clave por email al usuario.';
 $string['privacy:metadata:localkeys:status'] = 'El estado de la clave (activa, suspendida o revocada).';
 $string['privacy:metadata:localkeys:userid'] = 'El usuario al que pertenece la clave MCP.';
-$string['privacy:metadata:moodlemcp'] = 'Datos enviados al servicio del panel MCP para crear y gestionar claves API.';
+$string['privacy:metadata:moodlemcp'] = 'Datos enviados al servicio del panel de Studio LXD para crear y gestionar claves API.';
 $string['privacy:metadata:moodlemcp:email'] = 'La dirección de correo electrónico del usuario, utilizada al enviar claves MCP.';
 $string['privacy:metadata:moodlemcp:firstname'] = 'El nombre del usuario, utilizado en plantillas de correo.';
 $string['privacy:metadata:moodlemcp:lastname'] = 'El apellido del usuario, utilizado en plantillas de correo.';
@@ -185,7 +185,7 @@ $string['service_restore_confirm'] = '¿Restaurar el servicio "{$a}" a su lista 
 $string['service_restore_failed'] = 'No se pudo restaurar la configuración base del servicio.';
 $string['service_restored'] = 'Servicio "{$a}" restaurado a la configuración base.';
 $string['service_updated'] = 'Servicio "{$a}" actualizado.';
-$string['services_created'] = 'Se crearon {$a} servicio(s) SLXD.';
+$string['services_created'] = 'Se crearon {$a} servicio(s) de Studio LXD.';
 
 $string['services_heading'] = 'Servicios';
 $string['services_table_actions'] = 'Acciones';
@@ -197,8 +197,8 @@ $string['tab_license'] = 'Licencia';
 $string['tab_services'] = 'Servicios';
 $string['tab_settings'] = 'Configuración';
 $string['tab_users'] = 'Usuarios';
-$string['task_sync_users'] = 'Sincronizar usuarios de SLXD';
-$string['taskfailed'] = 'La tarea de SLXD falló: {$a}';
+$string['task_sync_users'] = 'Sincronizar usuarios de Studio LXD';
+$string['taskfailed'] = 'La tarea de Studio LXD falló: {$a}';
 $string['telemetry_enabled'] = 'Enviar telemetría al panel';
 $string['telemetry_enabled_desc'] = 'Opt-in: comparte con el panel las versiones de plugin/Moodle/PHP y el NÚMERO de claves aproximadamente una vez al día (nunca datos personales). Ayuda al soporte a diagnosticar problemas de forma proactiva.';
 $string['telemetry_section'] = 'Telemetría';

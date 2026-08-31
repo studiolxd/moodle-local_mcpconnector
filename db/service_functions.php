@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Service function definitions for SLXD.
+ * Service function definitions for Studio LXD.
  *
  * The per-role whitelists below name Moodle core web service functions only —
  * the list is derived from core's own service catalog, filtered down to what

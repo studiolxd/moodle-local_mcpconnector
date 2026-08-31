@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Install script for SLXD
+ * Install script for Studio LXD
  *
  * Documentation: {@link https://moodledev.io/docs/guides/upgrade}
  *
@@ -25,7 +25,7 @@
  */
 
 /**
- * Executed on installation of SLXD
+ * Executed on installation of Studio LXD
  *
  * @return bool
  */
