@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Admin settings registration for Moodle MCP.
+ * Admin settings registration for SLXD.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 // (e.g. a manager) see the category and pages in the admin tree.
 $managecap = 'local/mcpconnector:manage';
 if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
-    // The 'Moodle MCP' category — a heading, so it carries no link of its own.
+    // The 'SLXD' category — a heading, so it carries no link of its own.
     $ADMIN->add('localplugins', new admin_category(
         'local_mcpconnector_category',
         get_string('pluginname', 'local_mcpconnector')

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Install script for Moodle MCP
+ * Install script for SLXD
  *
  * Documentation: {@link https://moodledev.io/docs/guides/upgrade}
  *
@@ -25,7 +25,7 @@
  */
 
 /**
- * Executed on installation of Moodle MCP
+ * Executed on installation of SLXD
  *
  * @return bool
  */

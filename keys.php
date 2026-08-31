@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Keys management page for Moodle MCP.
+ * Keys management page for SLXD.
  *
  * Lists keys from the LOCAL metadata table (panel API v2 never returns key
  * values or tokens); a "Refresh from panel" action reconciles statuses.
@@ -122,7 +122,7 @@ if ($action !== '' && confirm_sesskey()) {
         if ($action === 'revoke') {
             $result = local_mcpconnector_panel_revoke_key($keyid);
             if ($result['ok'] || ($result['error'] ?? '') === 'not_found') {
-                // When revoked, remove the user's tokens and MoodleMCP service assignments.
+                // When revoked, remove the user's tokens and SLXD service assignments.
                 if ($DB->record_exists('user', ['id' => $row->userid, 'deleted' => 0])) {
                     local_mcpconnector_revoke_service_tokens((int) $row->userid);
                     $serviceids = local_mcpconnector_get_service_ids();

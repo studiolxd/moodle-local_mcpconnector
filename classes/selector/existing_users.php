@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Selector for existing MoodleMCP service users.
+ * Selector for existing SLXD service users.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD

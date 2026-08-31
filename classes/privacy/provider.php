@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Privacy API provider for Moodle MCP.
+ * Privacy API provider for SLXD.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
@@ -62,7 +62,7 @@ class provider implements
             'sentat' => 'privacy:metadata:localkeys:sentat',
         ], 'privacy:metadata:localkeys');
 
-        $collection->add_external_location_link('moodlemcp.com', [
+        $collection->add_external_location_link('slxd.app', [
             'userid' => 'privacy:metadata:moodlemcp:userid',
             'token' => 'privacy:metadata:moodlemcp:token',
             'roles' => 'privacy:metadata:moodlemcp:roles',

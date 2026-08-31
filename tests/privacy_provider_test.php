@@ -59,7 +59,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertNotEmpty($items);
         $names = array_map(static fn($item) => $item->get_name(), $items);
         $this->assertContains('local_mcpconnector_keys', $names);
-        $this->assertContains('moodlemcp.com', $names);
+        $this->assertContains('slxd.app', $names);
     }
 
     public function test_contexts_for_userid_only_when_rows_exist(): void {

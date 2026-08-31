@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Upgrade steps for Moodle MCP
+ * Upgrade steps for SLXD
  *
  * Documentation: {@link https://moodledev.io/docs/guides/upgrade}
  *

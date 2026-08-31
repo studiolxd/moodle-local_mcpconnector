@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Library functions for Moodle MCP.
+ * Library functions for SLXD.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/db/service_functions.php');
 
 /**
- * Returns the base URL for the MoodleMCP panel API.
+ * Returns the base URL for the SLXD panel API.
  *
  * @return string
  */
@@ -38,7 +38,7 @@ function local_mcpconnector_api_base_url(): string {
         return rtrim($configured, '/');
     }
 
-    return 'https://moodlemcp.com';
+    return 'https://slxd.app';
 }
 
 /**
@@ -127,7 +127,7 @@ function local_mcpconnector_oauth_deliver_token(
 // Note: local_mcpconnector_get_service_definitions() is now defined in db/service_functions.php.
 
 /**
- * Ensures the MoodleMCP services exist (creates missing ones only).
+ * Ensures the SLXD services exist (creates missing ones only).
  *
  * @return int Number of services created.
  */
@@ -419,7 +419,7 @@ function local_mcpconnector_get_effective_roles(int $userid): array {
 }
 
 /**
- * Returns the role name from a MoodleMCP service shortname.
+ * Returns the role name from a SLXD service shortname.
  *
  * @param string $shortname
  * @return string
@@ -446,7 +446,7 @@ function local_mcpconnector_is_auto_sync_enabled_for_service(string $service): b
 }
 
 /**
- * Checks if auto-sync is enabled for any MoodleMCP service.
+ * Checks if auto-sync is enabled for any SLXD service.
  *
  * @return bool
  */
@@ -500,7 +500,7 @@ function local_mcpconnector_get_service_display_name(string $service): string {
 
 
 /**
- * Determines whether a user is eligible for a MoodleMCP service.
+ * Determines whether a user is eligible for a SLXD service.
  *
  * @param int $userid
  * @param string $shortname
@@ -530,7 +530,7 @@ function local_mcpconnector_user_is_eligible_for_service(int $userid, string $sh
 }
 
 /**
- * Maps a role name to the corresponding MoodleMCP service shortname.
+ * Maps a role name to the corresponding SLXD service shortname.
  *
  * @param string $role
  * @return string
@@ -598,7 +598,7 @@ function local_mcpconnector_revoke_user_tokens(int $userid, int $serviceid): voi
 }
 
 /**
- * Revokes all MoodleMCP tokens for a user except the given service id.
+ * Revokes all SLXD tokens for a user except the given service id.
  *
  * @param int $userid
  * @param int $serviceid
@@ -623,7 +623,7 @@ function local_mcpconnector_revoke_other_service_tokens(int $userid, int $servic
 }
 
 /**
- * Revokes all MoodleMCP tokens for a user across all MoodleMCP services.
+ * Revokes all SLXD tokens for a user across all SLXD services.
  *
  * @param int $userid
  * @return void
@@ -717,7 +717,7 @@ function local_mcpconnector_get_user_service_token(int $userid, int $serviceid):
 }
 
 /**
- * Returns the external service id for a MoodleMCP service shortname.
+ * Returns the external service id for a SLXD service shortname.
  *
  * @param string $shortname
  * @return int|null
@@ -730,7 +730,7 @@ function local_mcpconnector_get_service_id(string $shortname): ?int {
 }
 
 /**
- * Returns all MoodleMCP service ids that exist.
+ * Returns all SLXD service ids that exist.
  *
  * @return int[]
  */
@@ -754,7 +754,7 @@ function local_mcpconnector_get_service_ids(): array {
 }
 
 /**
- * Returns a shortname => service id map for all MoodleMCP services in one query.
+ * Returns a shortname => service id map for all SLXD services in one query.
  *
  * Memoized per request to avoid the N+1 get_service_id() lookups a bulk sync would
  * otherwise incur. The cache is only populated once every expected service exists,
@@ -980,7 +980,7 @@ function local_mcpconnector_recalculate_user_key(int $userid): array {
     }
 
     try {
-        // 1. Get all MoodleMCP services (cached shortname => id map, one query per run).
+        // 1. Get all SLXD services (cached shortname => id map, one query per run).
         $idmap = local_mcpconnector_get_service_id_map();
         $serviceids = array_values($idmap);
         if (empty($serviceids)) {
@@ -997,7 +997,7 @@ function local_mcpconnector_recalculate_user_key(int $userid): array {
         );
 
         if (empty($assignments)) {
-            // User has no remaining MoodleMCP services. DELETE everything (cleanup).
+            // User has no remaining SLXD services. DELETE everything (cleanup).
             $del = local_mcpconnector_delete_user_keys($userid);
             if (!$del['ok']) {
                 return ['ok' => false, 'data' => null, 'error' => $del['error'] ?? 'revoke_failed'];
@@ -1120,7 +1120,7 @@ function local_mcpconnector_send_key_email(stdClass $user, string $mcpkey, strin
 }
 
 /**
- * Calls a MoodleMCP panel API endpoint (v2 signed contract).
+ * Calls a SLXD panel API endpoint (v2 signed contract).
  *
  * Every request is an HMAC-signed JSON POST: the x-panel-signature header covers
  * the timestamp and the EXACT raw body string sent (t=<unix>,v1=<hex hmac_sha256>,
@@ -1369,7 +1369,7 @@ function local_mcpconnector_panel_suspend_key(string $keyid, bool $suspend): arr
 }
 
 /**
- * Assigns a user to a MoodleMCP service and creates/updates their MCP key.
+ * Assigns a user to a SLXD service and creates/updates their MCP key.
  *
  * @param int $userid
  * @param string $serviceshortname
@@ -1439,7 +1439,7 @@ function local_mcpconnector_assign_user_to_service(int $userid, string $services
 }
 
 /**
- * Syncs a user to their primary MoodleMCP role and key.
+ * Syncs a user to their primary SLXD role and key.
  *
  * @param stdClass $user
  * @param string|null $limittoservice If set, only reconcile this specific service (add/remove). Leave others as is.
@@ -1582,7 +1582,7 @@ function local_mcpconnector_sync_user_auto(
             // Don't swallow it: leave sentat null (a "created but never sent" marker on
             // the Keys tab) and log so the admin can regenerate + resend.
             $reason = $autoemail ? 'email delivery failed' : 'auto-email disabled';
-            mtrace('MoodleMCP: minted key for user ' . (int) $user->id
+            mtrace('SLXD: minted key for user ' . (int) $user->id
                 . ' was not sent (' . $reason . '); sentat left null.');
             debugging('local_mcpconnector: minted key for user ' . (int) $user->id
                 . ' was not sent (' . $reason . ')', DEBUG_NORMAL);
@@ -1634,7 +1634,7 @@ function local_mcpconnector_sync_all_users(?string $servicefilter = null, ?array
                     local_mcpconnector_revoke_service_tokens((int) $row->userid);
                     $revoked++;
                 } else {
-                    mtrace('MoodleMCP: failed to revoke key ' . $row->panelkeyid
+                    mtrace('SLXD: failed to revoke key ' . $row->panelkeyid
                         . ' for deleted user ' . $row->userid . ': ' . ($revoke['error'] ?? 'unknown'));
                 }
             }
@@ -1735,7 +1735,7 @@ function local_mcpconnector_sync_all_users(?string $servicefilter = null, ?array
         }
         $synced++;
         if ($ratelimited) {
-            mtrace('MoodleMCP: panel rate limit hit; stopping bulk sync early, will resume next run.');
+            mtrace('SLXD: panel rate limit hit; stopping bulk sync early, will resume next run.');
             break;
         }
     }

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * User management for MoodleMCP services.
+ * User management for SLXD services.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD

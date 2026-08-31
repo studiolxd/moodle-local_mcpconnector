@@ -27,7 +27,7 @@ namespace local_mcpconnector\task;
 use core\task\adhoc_task;
 
 /**
- * Ad-hoc task that reconciles a single user's MoodleMCP services and key.
+ * Ad-hoc task that reconciles a single user's SLXD services and key.
  */
 class sync_user_adhoc extends adhoc_task {
     /**
