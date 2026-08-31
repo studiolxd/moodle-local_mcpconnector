@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Edit functions for a SLXD external service.
+ * Edit functions for a Studio LXD external service.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>

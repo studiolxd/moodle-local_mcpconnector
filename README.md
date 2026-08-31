@@ -4,20 +4,26 @@
 
 Connect your Moodle site to AI assistants (Claude, and any client that speaks
 the [Model Context Protocol](https://modelcontextprotocol.io)) through the
-[SLXD](https://slxd.app) panel. The plugin provisions role-scoped
+[Studio LXD](https://slxd.app) panel. The plugin provisions role-scoped
 Moodle web-service tokens and turns them into revocable **MCP keys** that an
 assistant presents to query your site.
 
-## Requires a SLXD account (commercial service)
+This repository is the **source of truth** for the plugin. It is developed
+against the [`lmsmcp`](https://lmsmcp.slxd.app) panel — part of the
+[Studio LXD](https://slxd.app) suite — and released independently of that
+panel's codebase.
+
+## Requires a Studio LXD account (commercial service)
 
 **This plugin does not work on its own.** It is the Moodle-side client of the
-[**SLXD**](https://slxd.app) hosted panel — a separate, commercial
+[**Studio LXD**](https://slxd.app) hosted panel (product: `lmsmcp`, at
+[lmsmcp.slxd.app](https://lmsmcp.slxd.app)) — a separate, commercial
 subscription service. You need an account and a license there to use it; an
 account can be created at [slxd.app](https://slxd.app) with a
 30-day free trial. The plugin talks to that panel over a signed HTTPS API and
 to no other third party.
 
-### Data sent to the SLXD panel
+### Data sent to the Studio LXD panel
 
 When an administrator provisions a user, the plugin sends the following to the
 panel (see the plugin's Privacy settings for the machine-readable declaration):
@@ -54,8 +60,8 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
 1. Copy this directory to `<moodleroot>/local/mcpconnector` (or install the zip
    via *Site administration → Plugins → Install plugins*) and complete the
    upgrade.
-2. In your [SLXD panel](https://slxd.app), connect your Moodle site
-   and copy the **license key** and **panel secret** (shown once).
+2. In your [Studio LXD panel](https://lmsmcp.slxd.app), connect your Moodle
+   site and copy the **license key** and **panel secret** (shown once).
 3. In Moodle, open *MCP Connector → License*, paste the panel URL, license key,
    secret and MCP endpoint URL, and validate.
 4. Assign users under *Users*; they receive their MCP key by email.
@@ -67,10 +73,29 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
 - Web-service tokens and MCP key values are never written to Moodle logs.
 - MCP keys and tokens are delivered by email — treat the mailbox accordingly.
 
+## Testing and CI
+
+This repository is the plugin's source of truth: `version.php` at the root
+carries the release, and there is no nested `plugin/` directory to look for.
+
+- **Manual testing against a local panel** — see [TESTING.md](TESTING.md) for
+  the full runbook (symlinking this repo into a local Moodle checkout,
+  license validation, key lifecycle, and the automatic sync flows).
+- **Local CI** — `scripts/ci.sh` mirrors the `phpcs` job of the GitHub Actions
+  workflow (Moodle coding style + `php -l`) against a local Moodle checkout,
+  so you get the real verdict without pushing. `scripts/ci.sh --fix` runs
+  `phpcbf` first; `scripts/ci.sh --tests` also runs the PHPUnit suite. Needs
+  `phpcs` with the `moodle` standard (`composer global require
+  moodlehq/moodle-cs`) and `MOODLE_ROOT` pointing at a Moodle checkout.
+- **GitHub Actions** — every push runs the full `moodle-plugin-ci` suite
+  (lint, coding style, PHPDoc, validation, upgrade savepoints, PHPUnit)
+  across the supported Moodle/PHP/database matrix.
+
 ## Support & source
 
 - Website: https://slxd.app
-- Docs: https://slxd.app/en/docs
+- Panel: https://lmsmcp.slxd.app
+- Docs: https://slxd.app/docs/lmsmcp
 - Source: https://github.com/studiolxd/moodle-local_mcpconnector
 - Issues: https://github.com/studiolxd/moodle-local_mcpconnector/issues
 

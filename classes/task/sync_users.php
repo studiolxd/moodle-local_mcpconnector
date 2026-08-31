@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Scheduled task to sync SLXD users and keys.
+ * Scheduled task to sync Studio LXD users and keys.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD
@@ -54,10 +54,10 @@ class sync_users extends scheduled_task {
         try {
             $telemetry = local_mcpconnector_send_telemetry();
             if ($telemetry['ok'] && empty($telemetry['skipped'])) {
-                mtrace('SLXD: telemetry sent.');
+                mtrace('Studio LXD: telemetry sent.');
             }
         } catch (\Throwable $e) {
-            mtrace('SLXD: telemetry failed: ' . $e->getMessage());
+            mtrace('Studio LXD: telemetry failed: ' . $e->getMessage());
         }
 
         // Only provision to services whose per-service auto-sync flag is on. Passing the
@@ -69,9 +69,9 @@ class sync_users extends scheduled_task {
 
         $result = local_mcpconnector_sync_all_users(null, $enabledservices);
         if (!$result['ok']) {
-            mtrace('SLXD: sync skipped (invalid license).');
+            mtrace('Studio LXD: sync skipped (invalid license).');
             return;
         }
-        mtrace('SLXD: synced users: ' . $result['synced'] . ', revoked keys: ' . $result['revoked']);
+        mtrace('Studio LXD: synced users: ' . $result['synced'] . ', revoked keys: ' . $result['revoked']);
     }
 }

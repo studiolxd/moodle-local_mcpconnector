@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 #
 # Local CI for the Moodle plugin — mirrors the `phpcs` job of
-# plugin/.github/workflows/moodle-plugin-ci.yml so you can get the real verdict
-# without pushing. Routine workflow:
+# .github/workflows/moodle-plugin-ci.yml so you can get the real verdict
+# without pushing. This repo's root IS the plugin (frankenstyle
+# local_mcpconnector). Routine workflow:
 #
-#   scripts/ci-plugin.sh          # report violations, non-zero exit if any
-#   scripts/ci-plugin.sh --fix    # run phpcbf over plugin/, then report
-#   scripts/ci-plugin.sh --tests  # + PHPUnit, against the Moodle checkout
+#   scripts/ci.sh          # report violations, non-zero exit if any
+#   scripts/ci.sh --fix    # run phpcbf over the repo, then report
+#   scripts/ci.sh --tests  # + PHPUnit, against the Moodle checkout
 #
 # Why it needs a Moodle checkout at all: several moodle-cs sniffs
 # (LangFilesOrdering, MoodleInternal, RequireLogin) look up the enclosing Moodle
 # version before doing anything, and stay silent when they can't find one.
-# Running phpcs over plugin/ with no Moodle in sight hides 185 real violations
+# Running phpcs over this repo with no Moodle in sight hides real violations
 # and reports a clean run — so this script fails loudly instead of scanning
 # without one.
 #
@@ -68,7 +69,7 @@ fi
 # version.php moved there. Stitch a root that satisfies both: symlinks to every
 # public/ entry plus config-dist.php from the checkout root. Cheap, read-only,
 # and it leaves the real checkout untouched — which matters because the dev
-# install already symlinks local/mcpconnector back to this repo's plugin/.
+# install already symlinks local/mcpconnector back to this repo's root.
 webroot="$MOODLE_ROOT"
 [[ -f "$MOODLE_ROOT/public/version.php" ]] && webroot="$MOODLE_ROOT/public"
 
@@ -87,7 +88,7 @@ if [[ ! -f "$webroot/config-dist.php" ]]; then
   ln -s "$MOODLE_ROOT/config-dist.php" "$moodleroot/config-dist.php"
 fi
 
-release=$(sed -n "s/.*\$plugin->release[^']*'\([^']*\)'.*/\1/p" plugin/version.php)
+release=$(sed -n "s/.*\$plugin->release[^']*'\([^']*\)'.*/\1/p" version.php)
 moodle=$(sed -n "s/.*\$release *= *'\([^']*\)'.*/\1/p" "$webroot/version.php" | head -1)
 printf 'local_mcpconnector %s against Moodle %s\n' "${release:-dev}" "${moodle:-?}"
 
@@ -97,22 +98,29 @@ if $FIX; then
   step "phpcbf (auto-fixing)"
   # phpcbf exits 1 when it fixed something and 2 when violations remain
   # unfixable — neither is a failure here, the phpcs report below is the gate.
-  "$phpcbf" --standard=moodle --runtime-set moodleRoot "$moodleroot" plugin/ || true
+  "$phpcbf" --standard=moodle --runtime-set moodleRoot "$moodleroot" . || true
 fi
 
 step "phpcs (Moodle coding style)"
 status=0
-run_phpcs --report=full plugin/ || status=$?
+run_phpcs --report=full . || status=$?
 
 if [[ $status -ne 0 ]]; then
-  run_phpcs --report=source plugin/ || true
+  run_phpcs --report=source . || true
   $FIX || warn "some of these are auto-fixable — rerun with --fix"
   exit 1
 fi
 ok "phpcs: no violations"
 
 step "php -l (syntax)"
-./scripts/lint-plugin.sh
+lint_status=0
+while IFS= read -r -d '' file; do
+  php -l "$file" >/dev/null || lint_status=1
+done < <(find . -name '*.php' -not -path './.git/*' -print0)
+if [[ $lint_status -ne 0 ]]; then
+  exit 1
+fi
+ok "php -l: no syntax errors"
 
 if $TESTS; then
   step "PHPUnit"

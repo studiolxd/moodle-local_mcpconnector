@@ -2,6 +2,28 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.1.0 — 2026-08-31
+
+Branding release: no functional change, no database change. This repository
+is now the source of truth for the plugin (it used to be copied into
+`apps/lmsmcp/plugin` in the SLXD monorepo and synced back here).
+
+### Changed
+- **Studio LXD branding throughout the visible surface**: admin pages, the
+  license/settings/email strings in `lang/en` and `lang/es`, the privacy
+  metadata summary, and mtrace log lines now say "Studio LXD" rather than
+  the bare "SLXD" acronym.
+- **Default panel URL** now points at `https://lmsmcp.slxd.app` (the actual
+  panel for this product) instead of the generic `https://slxd.app` marketing
+  domain.
+- **README** documents this repo as the plugin's source of truth, how to run
+  the local CI (`scripts/ci.sh`, `TESTING.md`), and links to the panel and to
+  the suite's docs (`https://slxd.app/docs/lmsmcp`).
+- **`scripts/ci.sh`** no longer assumes a nested `plugin/` directory (a
+  leftover from the monorepo layout) — it runs directly against this repo's
+  root, and its `php -l` step no longer calls a nonexistent
+  `scripts/lint-plugin.sh`.
+
 ## 1.0.2 — 2026-08-10
 
 Hardening release: no functional change, no database change.

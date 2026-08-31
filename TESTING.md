@@ -1,22 +1,22 @@
-# Runbook de pruebas — local_mcpconnector 2.0 contra el panel v2
+# Runbook de pruebas — local_mcpconnector contra el panel lmsmcp
 
 Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
 `http://localhost:3000` (`pnpm dev`) y el server MCP en `http://localhost:3005`
-(`pnpm mcp:dev`); ambos contra la BD `moodlemcp` local.
+(`pnpm mcp:dev`); ambos contra la BD `lmsmcp` local.
 
 ## Preparación (una vez)
 
 1. Symlink del plugin (iteración instantánea) — la carpeta destino DEBE
-   llamarse `mcpconnector` (frankenstyle `local_mcpconnector`) y el origen es la
-   carpeta `plugin/` (ahí está `version.php`). La ruta depende de la versión de
-   Moodle (el plugin soporta **4.2–5.1**): Moodle **5.0** movió el dirroot a
-   `public/`, así que en 5.x los plugins van bajo `public/local/`.
+   llamarse `mcpconnector` (frankenstyle `local_mcpconnector`) y el origen es
+   la raíz de este repo (ahí está `version.php`). La ruta depende de la
+   versión de Moodle (el plugin soporta **4.2–5.1**): Moodle **5.0** movió el
+   dirroot a `public/`, así que en 5.x los plugins van bajo `public/local/`.
    - **Moodle 4.x** (dirroot = raíz del checkout):
-     `ln -s /Users/suvi/Dev/moodlemcp/plugin <moodle>/local/mcpconnector`
+     `ln -s ~/Dev/studiolxd/moodle-local_mcpconnector <moodle>/local/mcpconnector`
    - **Moodle 5.x** (dirroot = `public/`):
-     `ln -s /Users/suvi/Dev/moodlemcp/plugin <moodle>/public/local/mcpconnector`
+     `ln -s ~/Dev/studiolxd/moodle-local_mcpconnector <moodle>/public/local/mcpconnector`
    Ej. real en este Mac (Moodle 5.2):
-   `ln -s /Users/suvi/Dev/moodlemcp/plugin ~/Dev/studiolxd/learn/moodle/public/local/mcpconnector`
+   `ln -s ~/Dev/studiolxd/moodle-local_mcpconnector ~/Dev/studiolxd/learn/moodle/public/local/mcpconnector`
 2. Panel dev arriba (`pnpm dev`) y sesión iniciada como owner/admin de una
    organización compartida.
 3. En el panel: **Organización → Moodle** → conectar con la URL del Moodle

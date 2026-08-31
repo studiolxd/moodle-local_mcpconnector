@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Library functions for SLXD.
+ * Library functions for Studio LXD.
  *
  * @package    local_mcpconnector
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/db/service_functions.php');
 
 /**
- * Returns the base URL for the SLXD panel API.
+ * Returns the base URL for the Studio LXD panel API.
  *
  * @return string
  */
@@ -38,7 +38,7 @@ function local_mcpconnector_api_base_url(): string {
         return rtrim($configured, '/');
     }
 
-    return 'https://slxd.app';
+    return 'https://lmsmcp.slxd.app';
 }
 
 /**
@@ -1582,7 +1582,7 @@ function local_mcpconnector_sync_user_auto(
             // Don't swallow it: leave sentat null (a "created but never sent" marker on
             // the Keys tab) and log so the admin can regenerate + resend.
             $reason = $autoemail ? 'email delivery failed' : 'auto-email disabled';
-            mtrace('SLXD: minted key for user ' . (int) $user->id
+            mtrace('Studio LXD: minted key for user ' . (int) $user->id
                 . ' was not sent (' . $reason . '); sentat left null.');
             debugging('local_mcpconnector: minted key for user ' . (int) $user->id
                 . ' was not sent (' . $reason . ')', DEBUG_NORMAL);
@@ -1634,7 +1634,7 @@ function local_mcpconnector_sync_all_users(?string $servicefilter = null, ?array
                     local_mcpconnector_revoke_service_tokens((int) $row->userid);
                     $revoked++;
                 } else {
-                    mtrace('SLXD: failed to revoke key ' . $row->panelkeyid
+                    mtrace('Studio LXD: failed to revoke key ' . $row->panelkeyid
                         . ' for deleted user ' . $row->userid . ': ' . ($revoke['error'] ?? 'unknown'));
                 }
             }
@@ -1735,7 +1735,7 @@ function local_mcpconnector_sync_all_users(?string $servicefilter = null, ?array
         }
         $synced++;
         if ($ratelimited) {
-            mtrace('SLXD: panel rate limit hit; stopping bulk sync early, will resume next run.');
+            mtrace('Studio LXD: panel rate limit hit; stopping bulk sync early, will resume next run.');
             break;
         }
     }
