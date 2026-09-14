@@ -1956,10 +1956,15 @@ function local_mcpconnector_sync_user_auto(
         $autoemail = (int) get_config('local_mcpconnector', 'auto_email') === 1;
         $sent = false;
         if ($autoemail) {
-            $sent = local_mcpconnector_send_key_email($user, $mcpkey, local_mcpconnector_get_mcp_url());
-            if ($sent) {
-                local_mcpconnector_mark_local_key_sent($panelkeyid);
-            }
+            // Same delivery path as a manual assignment: inline from cron,
+            // through the ad-hoc task when this runs inside a web request.
+            $delivery = local_mcpconnector_deliver_key_email(
+                $user,
+                $mcpkey,
+                local_mcpconnector_get_mcp_url(),
+                $panelkeyid
+            );
+            $sent = $delivery['delivered'];
         }
         if (!$sent) {
             // The minted key value is unrecoverable once this response is discarded.
