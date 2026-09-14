@@ -2,3 +2,6 @@ node_modules/
 .env
 .DS_Store
 *.zip
+
+# Notas de entrega de agentes (locales)
+NOTA-ENTREGA.local.md
