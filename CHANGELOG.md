@@ -2,6 +2,43 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.2.0 — 2026-09-14
+
+Panel migration and non-blocking provisioning. **Database change**: the key
+metadata table gains a `panelfingerprint` column (the upgrade fills it in).
+
+### Added
+- **Changing panel no longer orphans the keys silently.** A key only works on
+  the panel that minted it, so re-pairing a site with another panel (or
+  another license) left every existing key dead while *License → Validate*
+  cheerfully answered "License verified". Keys now record the panel they were
+  issued for, validation notices when that panel changes, and both *License*
+  and *Keys* show a persistent warning with the number of affected keys and a
+  **"Regenerate all keys and email them"** button (confirmation required: the
+  users' current keys stop working the moment they are replaced).
+- **Bulk regeneration**, reusing the per-key *Regenerate & email* flow for
+  each affected user, tolerating per-user failures and reporting a summary of
+  successes and errors. Above **10 affected users** it runs as an ad-hoc task
+  instead — two panel round trips plus an email per user is no longer a
+  request — and the page says so.
+- **The Keys tab marks keys issued for another panel** in their status, and
+  "Refresh from panel" no longer buries them as revoked: the current panel has
+  never heard of them, which is the point.
+
+### Changed
+- **Adding users no longer waits for the mail server.** The key email is
+  handed to a new `local_mcpconnector\task\send_key_email` ad-hoc task and the
+  page redirects as soon as the panel work is done; with a slow SMTP relay the
+  page used to look hung and admins reloaded mid-provisioning. The key value
+  exists only in the panel's create response, so it travels with the task
+  **encrypted** with the site key (`\core\encryption`, Sodium) and is decrypted
+  only to be sent; if encryption is unavailable the send stays inline rather
+  than putting a live key in the clear in the task queue. From CLI/cron the
+  send stays inline — nobody is waiting there. A failed send throws so Moodle
+  retries; the delivery is only stamped once the mail is actually away.
+- **Panel calls made from an admin page time out after 8 seconds** instead of
+  15; cron keeps the patient timeout.
+
 ## 1.1.0 — 2026-08-31
 
 Branding release: no functional change, no database change. This repository

@@ -32,8 +32,9 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
    (`http://localhost:3000`), licencia y secreto → Validate → estado `ok`.
    - Negativos: secreto incorrecto → `invalid_credentials`; URL de Moodle que
      no coincide con la conexión → `url_mismatch`.
-3. **Alta de clave**: pestaña Users → asignar un usuario a un servicio →
-   comprobar:
+3. **Alta de clave**: pestaña Users → asignar un usuario a un servicio → la
+   página redirige SIN esperar al correo (avisa de que se envía en segundo
+   plano); el correo sale al ejecutar el cron. Comprobar:
    - En el panel (`/organization/moodle/keys`): clave nueva con
      `createdBy: moodle`, last4 correcto.
    - Email al usuario con el valor `mcpk_...` (si auto-email activo).
@@ -57,6 +58,20 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
 6. **Flujos automáticos**: borrar un usuario de Moodle (o quitarle el rol) →
    el adhoc task revoca sus claves en el panel (verificar en
    `/organization/moodle/keys` y en el audit log de la organización).
+
+## Cambio de panel (migración de claves)
+
+1. Con claves ya emitidas contra el panel A, cambia en **License** la URL del
+   panel (o la licencia) por las del panel B y valida.
+2. El mensaje de validación avisa del cambio, y **License** y **Keys** enseñan
+   el aviso persistente con el número de claves afectadas. En la tabla de Keys
+   esas claves salen marcadas como de "otro panel".
+3. "Refresh from panel" NO debe darlas por revocadas.
+4. **Regenerar todas las claves y reenviar por correo** → confirmación →
+   cada usuario afectado recibe una clave nueva y el aviso desaparece.
+   - Con más de 10 usuarios afectados la página dice que se hace en segundo
+     plano: ejecuta el cron (`php admin/cli/cron.php`) y comprueba los correos.
+5. La clave vieja deja de funcionar contra el server MCP; la nueva sí.
 
 ## Cierre de ronda
 

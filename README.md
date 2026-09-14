@@ -52,7 +52,8 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
   functions.
 - **Users** — assign/remove users to a service (mints/revokes their key).
 - **Keys** — per-user key lifecycle: suspend, activate, revoke, regenerate +
-  email, and reconcile status with the panel.
+  email, and reconcile status with the panel. Keys issued for a *different*
+  panel (see below) are flagged here and can be regenerated in bulk.
 - **Settings** — per-role auto-sync and the key-delivery email template.
 
 ## Install
@@ -64,7 +65,19 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
    site and copy the **license key** and **panel secret** (shown once).
 3. In Moodle, open *MCP Connector → License*, paste the panel URL, license key,
    secret and MCP endpoint URL, and validate.
-4. Assign users under *Users*; they receive their MCP key by email.
+4. Assign users under *Users*; they receive their MCP key by email. The mail
+   is sent by a background task, so the page returns as soon as the keys are
+   minted — keys arrive as cron runs.
+
+### Moving to another panel
+
+A key only works on the panel that minted it. If you re-pair the site with a
+different panel (or a different license), validating the new license raises a
+warning on *License* and *Keys* saying how many keys were issued for the
+previous one, with a **Regenerate all keys and email them** button: each
+affected user's key is revoked and replaced, and they are emailed the new
+value. Above ten affected users the work runs as a background task instead of
+in the page (you get one email per user as the keys are issued).
 
 ## Security notes
 
@@ -72,6 +85,10 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
   secret (±5-minute replay window); the license key only identifies the install.
 - Web-service tokens and MCP key values are never written to Moodle logs.
 - MCP keys and tokens are delivered by email — treat the mailbox accordingly.
+- A key value only ever exists in the panel's create response. When the email
+  is sent from a background task, the value travels in the task queue
+  **encrypted** with the site key (`\core\encryption`); it is decrypted only to
+  be sent, and if the site cannot encrypt it the email is sent inline instead.
 
 ## Testing and CI
 
