@@ -162,10 +162,13 @@ final class panel_migration_test extends \advanced_testcase {
         $second = $this->getDataGenerator()->create_user();
 
         $old = $this->pair_with_panel('https://panel-a.example.com');
+        // Validated against panel A first: without that the move below is a
+        // first pairing, not a change, and nothing would be flagged.
+        local_mcpconnector_note_panel_fingerprint();
         $this->add_key((int) $first->id, $old);
         $this->add_key((int) $second->id, $old);
         $this->pair_with_panel('https://panel-b.example.com');
-        local_mcpconnector_note_panel_fingerprint();
+        $this->assertTrue(local_mcpconnector_note_panel_fingerprint());
 
         // No panel secret is configured, so every panel call fails: the point
         // is that the loop reports both failures instead of dying on the first.
