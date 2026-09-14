@@ -28,6 +28,8 @@ namespace local_mcpconnector;
  * @copyright  2026 Studio LXD <hello@studiolxd.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_mcpconnector_chat_ensure_user
+ * @covers     \local_mcpconnector_chat_repair_user
+ * @covers     \local_mcpconnector_chat_auth_is_usable
  * @covers     \local_mcpconnector_chat_assign_role
  * @covers     \local_mcpconnector_chat_status
  * @covers     \local_mcpconnector_chat_role_options
@@ -51,13 +53,137 @@ final class chat_identity_test extends \advanced_testcase {
         $user = local_mcpconnector_chat_ensure_user();
 
         $this->assertSame(LOCAL_MCPCONNECTOR_CHAT_USERNAME, $user->username);
-        $this->assertSame('nologin', $user->auth);
-        // The sentinel core uses for "there is no usable password here".
+        // The sentinel core uses for "there is no usable password here": this,
+        // and not the authentication method, is what keeps the account out.
         $this->assertSame(AUTH_PASSWORD_NOT_CACHED, $user->password);
         $this->assertSame(LOCAL_MCPCONNECTOR_CHAT_EMAIL, $user->email);
         // A reserved TLD: the address can never be delivered to a real person.
         $this->assertStringEndsWith('.invalid', $user->email);
         $this->assertEquals(1, $user->emailstop);
+    }
+
+    public function test_service_account_uses_an_enabled_authentication_method(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $user = local_mcpconnector_chat_ensure_user();
+
+        $this->assertSame(LOCAL_MCPCONNECTOR_CHAT_AUTH, $user->auth);
+        // NOT 'nologin': Moodle reads that as a disabled account and the
+        // web-service layer refuses its token ('wsaccessusernologin'), which is
+        // exactly what broke every 1.3.0 install.
+        $this->assertNotSame('nologin', $user->auth);
+        $this->assertTrue(is_enabled_auth($user->auth));
+        $this->assertTrue(local_mcpconnector_chat_auth_is_usable($user->auth));
+    }
+
+    public function test_nologin_is_never_considered_usable(): void {
+        $this->resetAfterTest();
+        $this->require_lib();
+
+        // Core keeps 'nologin' in its always-on list, so is_enabled_auth() says
+        // yes; the plugin's own check must still say no.
+        $this->assertTrue(is_enabled_auth('nologin'));
+        $this->assertFalse(local_mcpconnector_chat_auth_is_usable('nologin'));
+        $this->assertFalse(local_mcpconnector_chat_auth_is_usable(''));
+        $this->assertFalse(local_mcpconnector_chat_auth_is_usable('nosuchauthplugin'));
+    }
+
+    public function test_ensure_user_repairs_a_nologin_account_in_place(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        // An install that already ran 1.3.0: the account exists and is unusable.
+        $broken = local_mcpconnector_chat_ensure_user();
+        $DB->set_field('user', 'auth', 'nologin', ['id' => $broken->id]);
+        set_config('chat_userid', $broken->id, 'local_mcpconnector');
+
+        $repaired = local_mcpconnector_chat_ensure_user();
+
+        // The SAME account, fixed: a second service account would leave the
+        // panel's key pointing at the broken one.
+        $this->assertEquals($broken->id, $repaired->id);
+        $this->assertSame(LOCAL_MCPCONNECTOR_CHAT_AUTH, $repaired->auth);
+        $this->assertSame(AUTH_PASSWORD_NOT_CACHED, $repaired->password);
+        $this->assertEquals(
+            1,
+            $DB->count_records('user', ['username' => LOCAL_MCPCONNECTOR_CHAT_USERNAME, 'deleted' => 0])
+        );
+    }
+
+    public function test_repair_leaves_a_healthy_account_untouched(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $user = local_mcpconnector_chat_ensure_user();
+        $repaired = local_mcpconnector_chat_repair_user($user);
+
+        $this->assertEquals($user->id, $repaired->id);
+        $this->assertSame($user->auth, $repaired->auth);
+        $this->assertEquals($user->timemodified, $repaired->timemodified);
+    }
+
+    public function test_status_flags_an_account_left_on_nologin(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $user = local_mcpconnector_chat_ensure_user();
+        set_config('chat_userid', $user->id, 'local_mcpconnector');
+        set_config('chat_role', 'manager', 'local_mcpconnector');
+        local_mcpconnector_chat_assign_role((int) $user->id, 'manager');
+        $serviceid = (int) local_mcpconnector_get_service_id('mcpconnector_manager');
+        local_mcpconnector_authorize_user_for_service((int) $user->id, $serviceid);
+        local_mcpconnector_rotate_user_token((int) $user->id, $serviceid, 0);
+
+        // Everything else is in place; only the method is the 1.3.0 one.
+        $DB->set_field('user', 'auth', 'nologin', ['id' => $user->id]);
+
+        $status = local_mcpconnector_chat_status();
+
+        $this->assertTrue($status['roleok']);
+        $this->assertTrue($status['authorized']);
+        $this->assertTrue($status['tokenok']);
+        // Existing is not working: the account must NOT read as correct.
+        $this->assertFalse($status['authok']);
+        $this->assertFalse($status['ready']);
+    }
+
+    public function test_status_does_not_try_the_token_unless_asked(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $user = local_mcpconnector_chat_ensure_user();
+        set_config('chat_userid', $user->id, 'local_mcpconnector');
+        set_config('chat_role', 'manager', 'local_mcpconnector');
+        local_mcpconnector_chat_assign_role((int) $user->id, 'manager');
+        $serviceid = (int) local_mcpconnector_get_service_id('mcpconnector_manager');
+        local_mcpconnector_authorize_user_for_service((int) $user->id, $serviceid);
+        local_mcpconnector_rotate_user_token((int) $user->id, $serviceid, 0);
+
+        $status = local_mcpconnector_chat_status();
+
+        // The probe is an HTTP round trip: "Check now" asks for it, a page load
+        // does not, and until it runs the answer is "not tried", not "fine".
+        $this->assertTrue($status['tokenok']);
+        $this->assertNull($status['tokenworks']);
+        $this->assertNull($status['tokenerror']);
+    }
+
+    public function test_probe_refuses_an_empty_token_without_calling_anything(): void {
+        $this->resetAfterTest();
+        $this->require_lib();
+
+        $result = local_mcpconnector_chat_probe_token('');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('notoken', $result['error']);
     }
 
     public function test_ensure_user_reuses_the_existing_account(): void {
