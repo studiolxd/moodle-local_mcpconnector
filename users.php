@@ -84,6 +84,7 @@ if (optional_param('add', false, PARAM_BOOL) && confirm_sesskey()) {
     $selected = $potentialselector->get_selected_users();
     $added = 0;
     $failed = 0;
+    $queued = false;
     $errorcodes = [];
     if ($selected) {
         foreach ($selected as $user) {
@@ -91,6 +92,7 @@ if (optional_param('add', false, PARAM_BOOL) && confirm_sesskey()) {
                 $result = local_mcpconnector_assign_user_to_service((int) $user->id, $service);
                 if ($result['ok']) {
                     $added++;
+                    $queued = $queued || !empty($result['queued']);
                 } else {
                     $failed++;
                     if (!empty($result['error'])) {
@@ -109,6 +111,11 @@ if (optional_param('add', false, PARAM_BOOL) && confirm_sesskey()) {
         $parts[] = $added === 1
             ? get_string('users_added_singular', 'local_mcpconnector')
             : get_string('users_added_plural', 'local_mcpconnector', $added);
+        if ($queued) {
+            // The keys are minted; the emails ride a task, so say so instead
+            // of letting the admin wonder whether anything was sent.
+            $parts[] = get_string('users_added_email_queued', 'local_mcpconnector');
+        }
     }
     if ($failed > 0) {
         $parts[] = $failed === 1

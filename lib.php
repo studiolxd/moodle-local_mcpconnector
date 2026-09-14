@@ -1143,6 +1143,90 @@ function local_mcpconnector_send_key_email(stdClass $user, string $mcpkey, strin
 }
 
 /**
+ * Delivers a freshly minted key to its user, out of the request when possible.
+ *
+ * The key VALUE exists only in the panel's create response, so this is the one
+ * chance to deliver it — but sending it inline makes the admin wait for the
+ * SMTP server, which on a slow relay looks like a hung page. From a web
+ * request the send is therefore handed to an ad-hoc task, with the value
+ * encrypted (core\encryption, the site's own Sodium key) for the few minutes
+ * it sits in the task queue. From CLI/cron there is nobody to keep waiting,
+ * and if encryption is unavailable for any reason the send stays inline rather
+ * than putting a live key in the clear in the database.
+ *
+ * @param stdClass $user
+ * @param string $mcpkey
+ * @param string $mcpurl
+ * @param string $panelkeyid Panel key id, so the delivery can be recorded.
+ * @return array{delivered:bool,queued:bool} delivered is false only on a failed inline send.
+ */
+function local_mcpconnector_deliver_key_email(
+    stdClass $user,
+    string $mcpkey,
+    string $mcpurl,
+    string $panelkeyid
+): array {
+    if (!defined('CLI_SCRIPT') || !CLI_SCRIPT) {
+        if (local_mcpconnector_queue_key_email($user, $mcpkey, $mcpurl, $panelkeyid)) {
+            // The task marks the key as sent once the mail is actually away.
+            return ['delivered' => true, 'queued' => true];
+        }
+    }
+
+    if (!local_mcpconnector_send_key_email($user, $mcpkey, $mcpurl)) {
+        return ['delivered' => false, 'queued' => false];
+    }
+    local_mcpconnector_mark_local_key_sent($panelkeyid);
+
+    return ['delivered' => true, 'queued' => false];
+}
+
+/**
+ * Queues the key email as an ad-hoc task, with the key value encrypted.
+ *
+ * @param stdClass $user
+ * @param string $mcpkey
+ * @param string $mcpurl
+ * @param string $panelkeyid
+ * @return bool False when the value could not be encrypted — the caller must then send inline.
+ */
+function local_mcpconnector_queue_key_email(
+    stdClass $user,
+    string $mcpkey,
+    string $mcpurl,
+    string $panelkeyid
+): bool {
+    if (!class_exists('\core\encryption')) {
+        return false;
+    }
+
+    try {
+        $encrypted = \core\encryption::encrypt($mcpkey);
+    } catch (Throwable $e) {
+        // No Sodium, no key file, key generation disabled… whatever the
+        // reason, a plaintext key must never reach the task queue.
+        debugging(
+            'local_mcpconnector: could not encrypt the key for background delivery, sending inline: '
+            . $e->getMessage(),
+            DEBUG_DEVELOPER
+        );
+        return false;
+    }
+
+    $task = new \local_mcpconnector\task\send_key_email();
+    $task->set_custom_data([
+        'userid' => (int) $user->id,
+        'panelkeyid' => $panelkeyid,
+        'mcpurl' => $mcpurl,
+        'mcpkeyenc' => $encrypted,
+    ]);
+    $task->set_component('local_mcpconnector');
+    \core\task\manager::queue_adhoc_task($task);
+
+    return true;
+}
+
+/**
  * Calls a SLXD panel API endpoint (v2 signed contract).
  *
  * Every request is an HMAC-signed JSON POST: the x-panel-signature header covers
@@ -1151,9 +1235,10 @@ function local_mcpconnector_send_key_email(stdClass $user, string $mcpkey, strin
  *
  * @param string $path
  * @param array $payload licenseKey is injected when absent.
+ * @param int|null $timeout Seconds; defaults to the web/CLI timeout for the context.
  * @return array{ok:bool,data:array|null,error:string|null}
  */
-function local_mcpconnector_call_panel_api(string $path, array $payload): array {
+function local_mcpconnector_call_panel_api(string $path, array $payload, ?int $timeout = null): array {
     global $CFG;
 
     require_once($CFG->libdir . '/filelib.php');
@@ -1176,7 +1261,15 @@ function local_mcpconnector_call_panel_api(string $path, array $payload): array 
     $timestamp = time();
     $signature = 't=' . $timestamp . ',v1=' . hash_hmac('sha256', $timestamp . '.' . $body, $panelsecret);
 
-    $curl = new curl(['timeout' => 15]);
+    if ($timeout === null) {
+        // An admin waiting on a page gets the short timeout; cron, where
+        // nobody is waiting, gets the patient one.
+        $timeout = (defined('CLI_SCRIPT') && CLI_SCRIPT)
+            ? LOCAL_MCPCONNECTOR_PANEL_TIMEOUT_CLI
+            : LOCAL_MCPCONNECTOR_PANEL_TIMEOUT_WEB;
+    }
+
+    $curl = new curl(['timeout' => $timeout]);
     $curl->setHeader('Accept: application/json');
     $curl->setHeader('Content-Type: application/json');
     $curl->setHeader('x-panel-signature: ' . $signature);
@@ -1414,14 +1507,15 @@ function local_mcpconnector_render_panel_changed_notice(): string {
  * minted and delivered.
  *
  * @param int $userid
- * @return array{ok:bool,error:string|null} error is a panel code or a local one.
+ * @return array{ok:bool,error:string|null,queued:bool} error is a panel code or a local one;
+ *         queued is true when the email was handed to an ad-hoc task.
  */
 function local_mcpconnector_regenerate_user_key(int $userid): array {
     global $DB;
 
     $user = $DB->get_record('user', ['id' => $userid, 'deleted' => 0], '*', IGNORE_MISSING);
     if (!$user) {
-        return ['ok' => false, 'error' => 'invalid_user'];
+        return ['ok' => false, 'error' => 'invalid_user', 'queued' => false];
     }
 
     // Revoke first. A key the current panel never minted answers not_found —
@@ -1435,7 +1529,7 @@ function local_mcpconnector_regenerate_user_key(int $userid): array {
     foreach ($rows as $row) {
         $revoke = local_mcpconnector_panel_revoke_key((string) $row->panelkeyid);
         if (!$revoke['ok'] && ($revoke['error'] ?? '') !== 'not_found') {
-            return ['ok' => false, 'error' => (string) ($revoke['error'] ?? 'revoke_failed')];
+            return ['ok' => false, 'error' => (string) ($revoke['error'] ?? 'revoke_failed'), 'queued' => false];
         }
     }
 
@@ -1443,25 +1537,30 @@ function local_mcpconnector_regenerate_user_key(int $userid): array {
     // keep-as-is branch and has to mint a fresh key.
     $result = local_mcpconnector_recalculate_user_key($userid);
     if (empty($result['ok'])) {
-        return ['ok' => false, 'error' => (string) ($result['error'] ?? 'regenerate_failed')];
+        return ['ok' => false, 'error' => (string) ($result['error'] ?? 'regenerate_failed'), 'queued' => false];
     }
     if (empty($result['data']['mcpKey'])) {
         // Success with no key means the user has no MCP service left (their
         // row was cleaned up): there is nothing to deliver.
-        return ['ok' => false, 'error' => 'no_service'];
+        return ['ok' => false, 'error' => 'no_service', 'queued' => false];
     }
 
     $mcpkey = (string) $result['data']['mcpKey'];
     $panelkeyid = (string) ($result['data']['id'] ?? '');
 
-    if (!local_mcpconnector_send_key_email($user, $mcpkey, local_mcpconnector_get_mcp_url())) {
+    $delivery = local_mcpconnector_deliver_key_email(
+        $user,
+        $mcpkey,
+        local_mcpconnector_get_mcp_url(),
+        $panelkeyid
+    );
+    if (!$delivery['delivered']) {
         // The value is unrecoverable from here: say so instead of reporting
         // success for a key the user will never see.
-        return ['ok' => false, 'error' => 'email_failed'];
+        return ['ok' => false, 'error' => 'email_failed', 'queued' => false];
     }
-    local_mcpconnector_mark_local_key_sent($panelkeyid);
 
-    return ['ok' => true, 'error' => null];
+    return ['ok' => true, 'error' => null, 'queued' => $delivery['queued']];
 }
 
 /**
@@ -1652,24 +1751,27 @@ function local_mcpconnector_panel_suspend_key(string $keyid, bool $suspend): arr
  *
  * @param int $userid
  * @param string $serviceshortname
- * @return array{ok:bool,error:string|null,mcpkey:string|null,mcpurl:string|null}
+ * @return array{ok:bool,error:string|null,mcpkey:string|null,mcpurl:string|null,queued:bool}
+ *         queued is true when the key email was handed to an ad-hoc task.
  */
 function local_mcpconnector_assign_user_to_service(int $userid, string $serviceshortname): array {
     global $DB;
 
     if (!local_mcpconnector_license_is_valid()) {
-        return ['ok' => false, 'error' => 'invalid_license', 'mcpkey' => null, 'mcpurl' => null];
+        return ['ok' => false, 'error' => 'invalid_license', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
 
     if (!local_mcpconnector_user_is_eligible_for_service($userid, $serviceshortname)) {
-        return ['ok' => false, 'error' => 'not_eligible', 'mcpkey' => null, 'mcpurl' => null];
+        return ['ok' => false, 'error' => 'not_eligible', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
 
     local_mcpconnector_ensure_services();
     $serviceid = local_mcpconnector_get_service_id($serviceshortname);
     if (!$serviceid) {
-        return ['ok' => false, 'error' => 'missing_service', 'mcpkey' => null, 'mcpurl' => null];
+        return ['ok' => false, 'error' => 'missing_service', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
+
+    $queued = false;
 
     try {
         local_mcpconnector_authorize_user_for_service($userid, $serviceid);
@@ -1693,9 +1795,12 @@ function local_mcpconnector_assign_user_to_service(int $userid, string $services
                 $sent = false;
                 if ($autoemail) {
                     $user = $DB->get_record('user', ['id' => $userid], '*', IGNORE_MISSING);
-                    if ($user && local_mcpconnector_send_key_email($user, $mcpkey, $mcpurl)) {
-                        local_mcpconnector_mark_local_key_sent($panelkeyid);
-                        $sent = true;
+                    if ($user) {
+                        // Out of the request when it can be: an admin adding
+                        // users must not wait on the SMTP server.
+                        $delivery = local_mcpconnector_deliver_key_email($user, $mcpkey, $mcpurl, $panelkeyid);
+                        $sent = $delivery['delivered'];
+                        $queued = $delivery['queued'];
                     }
                 }
                 if (!$sent) {
@@ -1711,9 +1816,9 @@ function local_mcpconnector_assign_user_to_service(int $userid, string $services
             throw new Exception($result['error'] ?? 'recalculate_failed');
         }
 
-        return ['ok' => true, 'error' => null, 'mcpkey' => $mcpkey, 'mcpurl' => $mcpurl];
+        return ['ok' => true, 'error' => null, 'mcpkey' => $mcpkey, 'mcpurl' => $mcpurl, 'queued' => $queued];
     } catch (Exception $e) {
-        return ['ok' => false, 'error' => $e->getMessage(), 'mcpkey' => null, 'mcpurl' => null];
+        return ['ok' => false, 'error' => $e->getMessage(), 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
 }
 

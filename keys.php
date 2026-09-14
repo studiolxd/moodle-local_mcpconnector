@@ -267,7 +267,9 @@ if ($action !== '' && confirm_sesskey()) {
             if (!empty($result['ok'])) {
                 redirect(
                     $PAGE->url,
-                    get_string('key_sent', 'local_mcpconnector'),
+                    !empty($result['queued'])
+                        ? get_string('key_send_queued', 'local_mcpconnector')
+                        : get_string('key_sent', 'local_mcpconnector'),
                     null,
                     \core\output\notification::NOTIFY_SUCCESS
                 );
