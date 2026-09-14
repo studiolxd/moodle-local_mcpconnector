@@ -2,6 +2,61 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.0 — 2026-09-14
+
+The chat gets an identity of its own. **No database change**: everything new
+lives in plugin config.
+
+### Added
+- **A "Chat" tab that provisions the assistant's identity in one click.** The
+  panel chat used to need a key created by hand, pasting a Moodle web-service
+  token into the panel — enough friction that it rarely got done right. The
+  plugin now creates a **service account** in Moodle (`mcpconnector_chat`:
+  `nologin` authentication, an unusable password, a reserved `.invalid`
+  mailbox that cannot collide with a real person), assigns it the role the
+  administrator picks, authorizes it in the matching web service, mints its
+  token and registers that token in the panel as a **service key**
+  (`POST /api/moodle/keys` with `kind: "service"`, same license + panel-secret
+  signature as every other call). The panel designates it as the chat's
+  identity when the connection has none designated.
+- **Nothing is created at install time or when the site is paired** — only
+  when an administrator opens the tab and asks for it.
+- **The role comes from the roles the site already has.** The dropdown offers
+  the site's own roles that the panel understands (manager, editing teacher,
+  non-editing teacher, student, authenticated user); the plugin defines no
+  role of its own. A stock Moodle has no role with shortname `admin` — site
+  administrators are a config list, not a role — so that option simply never
+  appears.
+- **The scope of the grant is spelled out before the button**, without
+  euphemisms: the role is assigned **at system level**, so the assistant can
+  do whatever it allows across the *whole* site, and **every member of the
+  organisation in the panel chats through that one identity**. The notice also
+  says the scope can be narrowed afterwards from the panel (read-only,
+  specific tools, specific courses).
+- **A status block that checks the real thing, not a cached verdict**, with a
+  "Check now" button in the style of the License tab's: whether the account
+  still exists, whether it still holds its role at system level, whether it is
+  still authorized and still has a token, and — against the panel itself —
+  whether its key is still there. A key registered for a previous panel is
+  flagged like the user keys are.
+- **"Regenerate" repairs whatever broke.** Someone deleted the service account,
+  took its role away, revoked its token, or deleted the key in the panel: the
+  same button recreates what is missing, keeps what survives, always mints a
+  fresh token, and registers it again — which, per the panel contract, revokes
+  the previous service key so no dead credential is left behind.
+
+### Changed
+- **The automatic provisioning paths skip the chat account.** It holds a system
+  role, so the ordinary role-driven sync would have minted it a second,
+  personal key and churned it on every run; `recalculate_user_key()`,
+  `sync_user_auto()` and `assign_user_to_service()` now leave it alone, and it
+  is excluded from the Users tab selectors like the guest account is.
+- **Deleting the chat account in Moodle revokes its panel key.** Its key is not
+  in the local key table (it belongs to the site, not to a person), so the
+  `user_deleted` cleanup had to learn about it; **Deprovision** likewise forgets
+  the key it has just revoked, keeping the account and the chosen role so
+  re-provisioning reuses them.
+
 ## 1.2.0 — 2026-09-14
 
 Panel migration and non-blocking provisioning. **Database change**: the key

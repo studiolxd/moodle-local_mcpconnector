@@ -59,6 +59,39 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
    el adhoc task revoca sus claves en el panel (verificar en
    `/organization/moodle/keys` y en el audit log de la organización).
 
+## Identidad del chat (pestaña Chat)
+
+1. Entra en la pestaña **Chat** con la licencia ya validada. Estado inicial:
+   "todavía no se ha creado". Nada debe haberse creado al instalar ni al
+   emparejar.
+2. Elige un rol del desplegable (solo salen roles que existen en el sitio) y
+   pulsa **Crear la identidad del chat** → página de confirmación con el
+   aviso de alcance → confirmar. Comprobar:
+   - Usuario nuevo en Moodle: `mcpconnector_chat`, auth `nologin`, correo
+     `@mcpconnector.invalid`, sin poder iniciar sesión.
+   - Rol elegido asignado **a nivel de sistema** (Usuarios → Permisos →
+     Asignar roles de sistema).
+   - Token de servicios web para el servicio de ese rol.
+   - En el panel: clave nueva marcada como **de servicio** y designada como
+     identidad del chat (si la conexión no tenía ninguna designada a mano).
+   - El chat del panel responde sin que nadie haya pegado nada.
+3. **Comprobar ahora** → el estado se verifica de verdad contra Moodle y
+   contra el panel; la fecha de comprobación se actualiza.
+4. **Regenerar** — probar cada rotura por separado, y después de cada una
+   pulsar Comprobar (el estado debe decir qué falta) y Regenerar (debe
+   volver a verde, y el chat volver a funcionar):
+   - Borrar el usuario de servicio en Moodle.
+   - Quitarle el rol a nivel de sistema.
+   - Borrar su token (Servicios web → Gestionar tokens).
+   - Borrar o revocar la clave en el panel. Tras regenerar, la clave anterior
+     debe quedar revocada en el panel, no huérfana.
+5. **Cambiar de rol**: elegir otro rol y regenerar → el rol anterior se
+   retira, el nuevo se asigna, y la clave del panel se sustituye.
+6. **Que no se cruce con los usuarios normales**: el usuario de servicio NO
+   debe aparecer en los selectores de la pestaña Users, ni salir en Keys, ni
+   recibir correos, ni cambiar tras ejecutar el cron (`php admin/cli/cron.php`
+   con auto-sync activado).
+
 ## Cambio de panel (migración de claves)
 
 1. Con claves ya emitidas contra el panel A, cambia en **License** la URL del

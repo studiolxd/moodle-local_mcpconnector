@@ -54,6 +54,12 @@ Under *Site administration → Plugins → Local plugins → MCP Connector*:
 - **Keys** — per-user key lifecycle: suspend, activate, revoke, regenerate +
   email, and reconcile status with the panel. Keys issued for a *different*
   panel (see below) are flagged here and can be regenerated in bulk.
+- **Chat** — the assistant's own identity: creates a Moodle service account
+  (no interactive access), gives it a role you pick from the site's existing
+  roles **at system level**, mints its token and registers it in the panel as
+  the chat's service key. Nothing is created until you ask for it here, and
+  the page says plainly what that role can reach and that every member of your
+  organisation chats through that one identity.
 - **Settings** — per-role auto-sync and the key-delivery email template.
 
 ## Install
