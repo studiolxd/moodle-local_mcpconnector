@@ -2,6 +2,22 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.2 — 2026-09-14
+
+The panel learns the plugin's version at license validation time, not only
+through opt-in telemetry (voluntary and throttled to once every 20 hours, so
+it could show a stale version for hours after an update — or forever, if
+telemetry is off). **No database change.**
+
+### Added
+- **License validation now reports the installed plugin release and version**
+  (`pluginRelease`, `pluginVersion`), the same fields already sent by
+  telemetry and read from `core_plugin_manager`. It is sent on every
+  validation — automatic or from the button — so the panel's record is fresh
+  right after an install or update, when this data actually changes. Both
+  fields are optional on the panel's side: an older panel that does not read
+  them keeps working exactly as before.
+
 ## 1.3.1 — 2026-09-14
 
 Fixes the chat identity shipped in 1.3.0: its service account could not use web

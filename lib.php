@@ -2202,10 +2202,10 @@ function local_mcpconnector_validate_license(string $license): array {
 
     // The licenseKey is passed explicitly: at validation time the submitted value
     // may not be stored in config yet.
-    $result = local_mcpconnector_call_panel_api('/api/moodle/verify', [
+    $result = local_mcpconnector_call_panel_api('/api/moodle/verify', array_merge([
         'licenseKey' => $license,
         'moodleUrl' => rtrim($CFG->wwwroot, '/'),
-    ]);
+    ], local_mcpconnector_plugin_version_fields()));
 
     if ($result['ok'] && !empty($result['data']['valid'])) {
         // Validation is the only moment the site learns which panel it is
@@ -2277,6 +2277,22 @@ function local_mcpconnector_print_tabs(string $current): void {
 }
 
 /**
+ * Plugin release + version, in the shape the panel expects on both
+ * `/api/moodle/verify` and `/api/moodle/telemetry` (`pluginRelease` /
+ * `pluginVersion`, matching the panel's `plugin_release` / `plugin_version`
+ * connection fields).
+ *
+ * @return array{pluginRelease:string,pluginVersion:int}
+ */
+function local_mcpconnector_plugin_version_fields(): array {
+    $info = \core_plugin_manager::instance()->get_plugin_info('local_mcpconnector');
+    return [
+        'pluginRelease' => (string) ($info->release ?? ''),
+        'pluginVersion' => (int) ($info->versiondb ?? 0),
+    ];
+}
+
+/**
  * Sends the opt-in telemetry snapshot to the panel (support gold: versions
  * and key COUNTS only — never personal data). Throttled to ~daily unless
  * forced from the health page. No-op while the setting is off.
@@ -2295,7 +2311,6 @@ function local_mcpconnector_send_telemetry(bool $force = false): array {
         return ['ok' => true, 'error' => null, 'skipped' => true];
     }
 
-    $info = \core_plugin_manager::instance()->get_plugin_info('local_mcpconnector');
     $keys = ['active' => 0, 'suspended' => 0, 'revoked' => 0];
     $counts = $DB->get_records_sql(
         "SELECT status, COUNT(*) AS c FROM {local_mcpconnector_keys} GROUP BY status"
@@ -2321,15 +2336,16 @@ function local_mcpconnector_send_telemetry(bool $force = false): array {
         'classname' => '\local_mcpconnector\task\sync_users',
     ]);
 
-    $result = local_mcpconnector_call_panel_api('/api/moodle/telemetry', [
-        'pluginRelease' => (string) ($info->release ?? ''),
-        'pluginVersion' => (int) ($info->versiondb ?? 0),
-        'moodleRelease' => (string) $CFG->release,
-        'phpVersion' => PHP_VERSION,
-        'keys' => $keys,
-        'autoSync' => $autosync,
-        'lastSyncAt' => (int) ($task->lastruntime ?? 0),
-    ]);
+    $result = local_mcpconnector_call_panel_api('/api/moodle/telemetry', array_merge(
+        local_mcpconnector_plugin_version_fields(),
+        [
+            'moodleRelease' => (string) $CFG->release,
+            'phpVersion' => PHP_VERSION,
+            'keys' => $keys,
+            'autoSync' => $autosync,
+            'lastSyncAt' => (int) ($task->lastruntime ?? 0),
+        ]
+    ));
     if ($result['ok']) {
         set_config('telemetry_sent_at', time(), 'local_mcpconnector');
     }
