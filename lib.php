@@ -28,6 +28,26 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/db/service_functions.php');
 
 /**
+ * Panel API timeout (seconds) for calls made from an interactive admin page.
+ * Short on purpose: an admin waiting on a redirect must not stare at a blank
+ * page for a quarter of a minute when the panel is slow.
+ */
+define('LOCAL_MCPCONNECTOR_PANEL_TIMEOUT_WEB', 8);
+
+/**
+ * Panel API timeout (seconds) for calls made from CLI/cron (tasks). Nobody is
+ * waiting there, so a slow panel gets the time it needs.
+ */
+define('LOCAL_MCPCONNECTOR_PANEL_TIMEOUT_CLI', 15);
+
+/**
+ * How many users a bulk key regeneration may process inside the request.
+ * Above this the work goes to an ad-hoc task: every user costs two panel round
+ * trips plus an email, so a large site would otherwise time the page out.
+ */
+define('LOCAL_MCPCONNECTOR_REGENERATE_SYNC_MAX', 10);
+
+/**
  * Returns the base URL for the Studio LXD panel API.
  *
  * @return string
@@ -819,6 +839,9 @@ function local_mcpconnector_record_local_key(
     $record->keylast4 = $keylast4;
     $record->roles = implode(',', $roles);
     $record->status = 'active';
+    // Stamp the panel that minted it: the key dies if the site is ever
+    // re-paired with a different panel, and that has to be detectable.
+    $record->panelfingerprint = local_mcpconnector_panel_fingerprint();
     $record->sentat = null;
     $record->expiresat = $expiresat;
     $record->timecreated = $now;
@@ -1216,6 +1239,262 @@ function local_mcpconnector_get_license_key(): string {
  */
 function local_mcpconnector_license_is_valid(): bool {
     return get_config('local_mcpconnector', 'license_status') === 'ok';
+}
+
+/**
+ * Fingerprint identifying the panel installation a key belongs to.
+ *
+ * A key is only ever valid on the panel that minted it: move the site to
+ * another panel (or re-pair it with a different license) and every existing
+ * key becomes an orphan the new panel has never heard of. The pair
+ * (panel URL, license key) identifies that installation; it is hashed so the
+ * license key is not copied around the keys table.
+ *
+ * @param string|null $panelurl Defaults to the configured panel URL.
+ * @param string|null $license Defaults to the configured license key.
+ * @return string 64-char hex digest, or '' when the panel is not configured.
+ */
+function local_mcpconnector_panel_fingerprint(?string $panelurl = null, ?string $license = null): string {
+    $panelurl = rtrim(trim($panelurl ?? (string) get_config('local_mcpconnector', 'panel_url')), '/');
+    $license = trim($license ?? local_mcpconnector_get_license_key());
+
+    if ($panelurl === '' || $license === '') {
+        return '';
+    }
+
+    return hash('sha256', $panelurl . "\n" . $license);
+}
+
+/**
+ * Records the panel the site is now paired with, detecting a panel change.
+ *
+ * Called after every SUCCESSFUL validation: when the fingerprint differs from
+ * the stored one the site has been re-pointed at another panel (or another
+ * license), so the moment is remembered for the "your keys were issued for a
+ * different panel" notice.
+ *
+ * @return bool True when the panel changed (and keys were already issued).
+ */
+function local_mcpconnector_note_panel_fingerprint(): bool {
+    global $DB;
+
+    $fingerprint = local_mcpconnector_panel_fingerprint();
+    if ($fingerprint === '') {
+        return false;
+    }
+
+    $previous = (string) get_config('local_mcpconnector', 'panel_fingerprint');
+    $changed = $previous !== '' && $previous !== $fingerprint;
+
+    set_config('panel_fingerprint', $fingerprint, 'local_mcpconnector');
+
+    if (!$changed) {
+        return false;
+    }
+
+    // Only worth flagging when there is something to migrate: keys minted for
+    // the previous panel are dead weight until they are regenerated.
+    $orphans = $DB->count_records_select(
+        'local_mcpconnector_keys',
+        "status <> 'revoked' AND (panelfingerprint IS NULL OR panelfingerprint <> :fingerprint)",
+        ['fingerprint' => $fingerprint]
+    );
+    if ($orphans === 0) {
+        return false;
+    }
+
+    set_config('panel_changed_at', time(), 'local_mcpconnector');
+    return true;
+}
+
+/**
+ * SQL fragment selecting the keys that belong to a PREVIOUS panel.
+ *
+ * Revoked keys are excluded: they are dead on any panel and regenerating them
+ * would resurrect access an administrator deliberately cut off.
+ *
+ * @return array{0:string,1:array} [where, params]; an impossible where when the panel is unknown.
+ */
+function local_mcpconnector_foreign_keys_select(): array {
+    $fingerprint = local_mcpconnector_panel_fingerprint();
+    if ($fingerprint === '') {
+        return ['1 = 2', []];
+    }
+
+    return [
+        "status <> 'revoked' AND (panelfingerprint IS NULL OR panelfingerprint <> :fingerprint)",
+        ['fingerprint' => $fingerprint],
+    ];
+}
+
+/**
+ * Whether a local key row was issued for a panel other than the current one.
+ *
+ * @param stdClass $row A local_mcpconnector_keys record.
+ * @return bool
+ */
+function local_mcpconnector_key_is_foreign(stdClass $row): bool {
+    $fingerprint = local_mcpconnector_panel_fingerprint();
+    if ($fingerprint === '') {
+        return false;
+    }
+
+    return (string) ($row->panelfingerprint ?? '') !== $fingerprint;
+}
+
+/**
+ * Counts the live keys that were issued for a previous panel.
+ *
+ * @return int
+ */
+function local_mcpconnector_count_foreign_keys(): int {
+    global $DB;
+
+    [$where, $params] = local_mcpconnector_foreign_keys_select();
+    return $DB->count_records_select('local_mcpconnector_keys', $where, $params);
+}
+
+/**
+ * The users holding at least one key issued for a previous panel.
+ *
+ * @return int[] Moodle user ids.
+ */
+function local_mcpconnector_get_foreign_key_userids(): array {
+    global $DB;
+
+    [$where, $params] = local_mcpconnector_foreign_keys_select();
+    $rows = $DB->get_records_select('local_mcpconnector_keys', $where, $params, 'userid ASC', 'DISTINCT userid');
+
+    return array_map('intval', array_keys($rows));
+}
+
+/**
+ * Renders the "your keys belong to another panel" warning, with the bulk
+ * regeneration button, when there is something to warn about.
+ *
+ * Printed on both the License and the Keys tab: the admin who re-paired the
+ * site sees it where they did it, and again where the keys live.
+ *
+ * @return string HTML, or '' when every live key matches the current panel.
+ */
+function local_mcpconnector_render_panel_changed_notice(): string {
+    global $OUTPUT;
+
+    $count = local_mcpconnector_count_foreign_keys();
+    if ($count === 0) {
+        return '';
+    }
+
+    $message = html_writer::div(get_string('panel_changed_warning', 'local_mcpconnector', $count));
+
+    $button = html_writer::start_tag('form', [
+        'method' => 'post',
+        'action' => (new moodle_url('/local/mcpconnector/keys.php'))->out(false),
+        'class' => 'mt-2',
+    ]);
+    $button .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'regenerateall']);
+    $button .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+    $button .= html_writer::empty_tag('input', [
+        'type' => 'submit',
+        'class' => 'btn btn-primary',
+        'value' => get_string('keys_regenerate_all', 'local_mcpconnector'),
+    ]);
+    $button .= html_writer::end_tag('form');
+
+    return $OUTPUT->notification($message . $button, 'warning', false);
+}
+
+/**
+ * Regenerates a user's MCP key and emails them the new value.
+ *
+ * Shared by the per-key "Regenerate & email" action, the bulk regeneration
+ * after a panel change and its ad-hoc task, so all three behave identically:
+ * every live key of the user is revoked first (a key value can never be
+ * re-read, so "resend" can only ever mean "replace"), then a fresh one is
+ * minted and delivered.
+ *
+ * @param int $userid
+ * @return array{ok:bool,error:string|null} error is a panel code or a local one.
+ */
+function local_mcpconnector_regenerate_user_key(int $userid): array {
+    global $DB;
+
+    $user = $DB->get_record('user', ['id' => $userid, 'deleted' => 0], '*', IGNORE_MISSING);
+    if (!$user) {
+        return ['ok' => false, 'error' => 'invalid_user'];
+    }
+
+    // Revoke first. A key the current panel never minted answers not_found —
+    // expected after a panel change, and harmless: the local row is dead
+    // either way, which is exactly what forces the mint below.
+    $rows = $DB->get_records_select(
+        'local_mcpconnector_keys',
+        "userid = :userid AND status <> 'revoked'",
+        ['userid' => $userid]
+    );
+    foreach ($rows as $row) {
+        $revoke = local_mcpconnector_panel_revoke_key((string) $row->panelkeyid);
+        if (!$revoke['ok'] && ($revoke['error'] ?? '') !== 'not_found') {
+            return ['ok' => false, 'error' => (string) ($revoke['error'] ?? 'revoke_failed')];
+        }
+    }
+
+    // With no live local key left, the reconciliation cannot take its
+    // keep-as-is branch and has to mint a fresh key.
+    $result = local_mcpconnector_recalculate_user_key($userid);
+    if (empty($result['ok'])) {
+        return ['ok' => false, 'error' => (string) ($result['error'] ?? 'regenerate_failed')];
+    }
+    if (empty($result['data']['mcpKey'])) {
+        // Success with no key means the user has no MCP service left (their
+        // row was cleaned up): there is nothing to deliver.
+        return ['ok' => false, 'error' => 'no_service'];
+    }
+
+    $mcpkey = (string) $result['data']['mcpKey'];
+    $panelkeyid = (string) ($result['data']['id'] ?? '');
+
+    if (!local_mcpconnector_send_key_email($user, $mcpkey, local_mcpconnector_get_mcp_url())) {
+        // The value is unrecoverable from here: say so instead of reporting
+        // success for a key the user will never see.
+        return ['ok' => false, 'error' => 'email_failed'];
+    }
+    local_mcpconnector_mark_local_key_sent($panelkeyid);
+
+    return ['ok' => true, 'error' => null];
+}
+
+/**
+ * Regenerates the keys of several users, tolerating per-user failures.
+ *
+ * @param int[] $userids
+ * @return array{done:int,failed:int,errors:string[]} errors are unique codes.
+ */
+function local_mcpconnector_regenerate_keys_for_users(array $userids): array {
+    $done = 0;
+    $failed = 0;
+    $errors = [];
+
+    foreach ($userids as $userid) {
+        try {
+            $result = local_mcpconnector_regenerate_user_key((int) $userid);
+        } catch (Exception $e) {
+            $result = ['ok' => false, 'error' => $e->getMessage()];
+        }
+        if (!empty($result['ok'])) {
+            $done++;
+        } else {
+            $failed++;
+            $errors[] = (string) ($result['error'] ?? '');
+        }
+    }
+
+    if (local_mcpconnector_count_foreign_keys() === 0) {
+        // Migration complete: the warning has nothing left to warn about.
+        unset_config('panel_changed_at', 'local_mcpconnector');
+    }
+
+    return ['done' => $done, 'failed' => $failed, 'errors' => array_values(array_unique($errors))];
 }
 
 /**
@@ -1752,7 +2031,9 @@ function local_mcpconnector_sync_all_users(?string $servicefilter = null, ?array
  * Validates the license key + panel secret pair against the panel (signed).
  *
  * @param string $license
- * @return array{status:string,message:string}
+ * @return array{status:string,message:string,panelchanged:bool} panelchanged is
+ *         true when this validation paired the site with a DIFFERENT panel and
+ *         keys minted for the previous one are still live.
  */
 function local_mcpconnector_validate_license(string $license): array {
     global $CFG;
@@ -1762,6 +2043,7 @@ function local_mcpconnector_validate_license(string $license): array {
         return [
             'status' => 'error',
             'message' => get_string('license_empty', 'local_mcpconnector'),
+            'panelchanged' => false,
         ];
     }
 
@@ -1769,6 +2051,7 @@ function local_mcpconnector_validate_license(string $license): array {
         return [
             'status' => 'error',
             'message' => get_string('panel_secret_missing', 'local_mcpconnector'),
+            'panelchanged' => false,
         ];
     }
 
@@ -1780,9 +2063,13 @@ function local_mcpconnector_validate_license(string $license): array {
     ]);
 
     if ($result['ok'] && !empty($result['data']['valid'])) {
+        // Validation is the only moment the site learns which panel it is
+        // paired with — record it (and notice a change of panel) here, so
+        // every caller benefits without repeating the bookkeeping.
         return [
             'status' => 'ok',
             'message' => '',
+            'panelchanged' => local_mcpconnector_note_panel_fingerprint(),
         ];
     }
 
@@ -1794,6 +2081,7 @@ function local_mcpconnector_validate_license(string $license): array {
     return [
         'status' => 'error',
         'message' => local_mcpconnector_panel_error_message($code),
+        'panelchanged' => false,
     ];
 }
 /**

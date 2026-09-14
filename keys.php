@@ -67,6 +67,12 @@ if ($action !== '' && confirm_sesskey()) {
                         local_mcpconnector_set_local_key_status((string) $row->panelkeyid, $newstatus);
                     }
                 } else if (!$truncated && $row->status !== 'revoked') {
+                    if (local_mcpconnector_key_is_foreign($row)) {
+                        // Minted for a DIFFERENT panel: of course this one has
+                        // never heard of it. Revoking would only hide it from
+                        // the migration notice, which is what fixes it.
+                        continue;
+                    }
                     // The key no longer exists on the panel: treat it as revoked.
                     local_mcpconnector_set_local_key_status((string) $row->panelkeyid, 'revoked');
                 }
@@ -89,6 +95,72 @@ if ($action !== '' && confirm_sesskey()) {
                 \core\output\notification::NOTIFY_ERROR
             );
         }
+    } else if ($action === 'regenerateall') {
+        // Bulk migration after the site was re-paired with another panel:
+        // every user still holding a key the current panel never minted gets a
+        // fresh one, emailed.
+        $userids = local_mcpconnector_get_foreign_key_userids();
+        if (empty($userids)) {
+            redirect(
+                $PAGE->url,
+                get_string('keys_regenerate_all_none', 'local_mcpconnector'),
+                null,
+                \core\output\notification::NOTIFY_INFO
+            );
+        }
+
+        if (!$confirm) {
+            $continueurl = new moodle_url($PAGE->url, [
+                'action' => 'regenerateall',
+                'confirm' => 1,
+                'sesskey' => sesskey(),
+            ]);
+            $cancelurl = new moodle_url('/local/mcpconnector/keys.php');
+            echo $OUTPUT->header();
+            local_mcpconnector_print_tabs('keys');
+            echo $OUTPUT->confirm(
+                get_string('keys_regenerate_all_confirm', 'local_mcpconnector', count($userids)),
+                $continueurl,
+                $cancelurl
+            );
+            echo $OUTPUT->footer();
+            return;
+        }
+
+        // Two panel round trips and an email per user: past a handful that is
+        // no longer a request, it is a job.
+        if (count($userids) > LOCAL_MCPCONNECTOR_REGENERATE_SYNC_MAX) {
+            $task = new \local_mcpconnector\task\regenerate_keys_adhoc();
+            $task->set_custom_data(['userids' => array_values($userids)]);
+            $task->set_component('local_mcpconnector');
+            \core\task\manager::queue_adhoc_task($task, true);
+
+            redirect(
+                $PAGE->url,
+                get_string('keys_regenerate_all_queued', 'local_mcpconnector', count($userids)),
+                null,
+                \core\output\notification::NOTIFY_SUCCESS
+            );
+        }
+
+        $summary = local_mcpconnector_regenerate_keys_for_users($userids);
+        $parts = [];
+        $type = \core\output\notification::NOTIFY_SUCCESS;
+        if ($summary['done'] > 0) {
+            $parts[] = get_string('keys_regenerate_all_done', 'local_mcpconnector', $summary['done']);
+        }
+        if ($summary['failed'] > 0) {
+            $parts[] = get_string('keys_regenerate_all_failed', 'local_mcpconnector', $summary['failed']);
+            if (!empty($summary['errors'])) {
+                $parts[] = local_mcpconnector_panel_error_message((string) reset($summary['errors']));
+                debugging(
+                    'local_mcpconnector: bulk regeneration errors: ' . implode(', ', $summary['errors']),
+                    DEBUG_DEVELOPER
+                );
+            }
+            $type = \core\output\notification::NOTIFY_ERROR;
+        }
+        redirect($PAGE->url, implode(' ', $parts), null, $type);
     } else if ($keyid !== '') {
         $row = $DB->get_record('local_mcpconnector_keys', ['panelkeyid' => $keyid], '*', IGNORE_MISSING);
         if (!$row) {
@@ -189,63 +261,34 @@ if ($action !== '' && confirm_sesskey()) {
             }
         } else if ($action === 'regenerate') {
             // The key value is gone forever after creation, so "send" is now
-            // regenerate + email: revoke the old key, mint a new one via the
-            // same flow used on assignment, and email the fresh value.
-            $user = $DB->get_record('user', ['id' => $row->userid, 'deleted' => 0], '*', IGNORE_MISSING);
-            if (!$user) {
+            // regenerate + email: revoke the old key, mint a new one and email
+            // the fresh value. Shared with the bulk migration path.
+            $result = local_mcpconnector_regenerate_user_key((int) $row->userid);
+            if (!empty($result['ok'])) {
                 redirect(
                     $PAGE->url,
-                    get_string('key_regen_failed', 'local_mcpconnector'),
+                    get_string('key_sent', 'local_mcpconnector'),
+                    null,
+                    \core\output\notification::NOTIFY_SUCCESS
+                );
+            }
+            $error = (string) ($result['error'] ?? '');
+            if ($error === 'email_failed') {
+                // The key WAS regenerated; only delivery failed.
+                redirect(
+                    $PAGE->url,
+                    get_string('key_send_failed', 'local_mcpconnector'),
                     null,
                     \core\output\notification::NOTIFY_ERROR
                 );
             }
-            // Revoke the old key first. If that fails (and it wasn't already gone),
-            // abort: recalc would otherwise report "regen failed" while the panel key
-            // is actually still live — leave a recoverable state and show the real error.
-            if ($row->status !== 'revoked') {
-                $revokeresult = local_mcpconnector_panel_revoke_key($keyid);
-                if (!$revokeresult['ok'] && ($revokeresult['error'] ?? '') !== 'not_found') {
-                    redirect(
-                        $PAGE->url,
-                        get_string('key_revoke_failed', 'local_mcpconnector') . ' '
-                        . local_mcpconnector_panel_error_message((string) ($revokeresult['error'] ?? '')),
-                        null,
-                        \core\output\notification::NOTIFY_ERROR
-                    );
-                }
-            }
-            // A successful revoke (or a pre-revoked row) marks the local row revoked,
-            // so recalc cannot take the keep-as-is branch and is forced to mint a fresh key.
-            $result = local_mcpconnector_recalculate_user_key((int) $user->id);
-            if ($result['ok'] && !empty($result['data']['mcpKey'])) {
-                $newkey = (string) $result['data']['mcpKey'];
-                $panelkeyid = (string) ($result['data']['id'] ?? '');
-                if (local_mcpconnector_send_key_email($user, $newkey, local_mcpconnector_get_mcp_url())) {
-                    local_mcpconnector_mark_local_key_sent($panelkeyid);
-                    redirect(
-                        $PAGE->url,
-                        get_string('key_sent', 'local_mcpconnector'),
-                        null,
-                        \core\output\notification::NOTIFY_SUCCESS
-                    );
-                } else {
-                    redirect(
-                        $PAGE->url,
-                        get_string('key_send_failed', 'local_mcpconnector'),
-                        null,
-                        \core\output\notification::NOTIFY_ERROR
-                    );
-                }
-            } else {
-                redirect(
-                    $PAGE->url,
-                    get_string('key_regen_failed', 'local_mcpconnector') . ' '
-                    . local_mcpconnector_panel_error_message((string) ($result['error'] ?? '')),
-                    null,
-                    \core\output\notification::NOTIFY_ERROR
-                );
-            }
+            redirect(
+                $PAGE->url,
+                get_string('key_regen_failed', 'local_mcpconnector') . ' '
+                . local_mcpconnector_panel_error_message($error),
+                null,
+                \core\output\notification::NOTIFY_ERROR
+            );
         }
     }
 }
@@ -253,6 +296,8 @@ if ($action !== '' && confirm_sesskey()) {
 echo $OUTPUT->header();
 
 local_mcpconnector_print_tabs('keys');
+
+echo local_mcpconnector_render_panel_changed_notice();
 
 $licensekey = local_mcpconnector_get_license_key();
 if ($licensekey === '' || !local_mcpconnector_license_is_valid()) {
@@ -320,6 +365,17 @@ foreach ($rows as $row) {
         $statusdisplay = $status;
     }
 
+    $statusdisplay = s($statusdisplay);
+    if (local_mcpconnector_key_is_foreign($row) && $status !== 'revoked') {
+        // Issued for another panel: the status says 'active', but the key is
+        // not going to work anywhere until it is regenerated.
+        $statusdisplay .= ' ' . html_writer::span(
+            get_string('key_status_other_panel', 'local_mcpconnector'),
+            'badge bg-warning text-dark',
+            ['title' => get_string('key_status_other_panel_help', 'local_mcpconnector')]
+        );
+    }
+
     $keylast4 = (string) $row->keylast4;
     $keydisplay = $keylast4 !== '' ? '…' . $keylast4 : '-';
 
@@ -360,7 +416,7 @@ foreach ($rows as $row) {
         s($name),
         s($keydisplay),
         s($role),
-        s($statusdisplay),
+        $statusdisplay,
         s($sent),
         s($created),
         !empty($actions) ? implode(' ', $actions) : '-',

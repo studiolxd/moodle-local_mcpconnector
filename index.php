@@ -84,11 +84,18 @@ if ($action === 'save_license' && confirm_sesskey()) {
     }
 
     if ($result['status'] === 'ok') {
+        // A validated license against a DIFFERENT panel orphans every key
+        // minted so far: say so here, and again in the persistent notice.
+        $message = !empty($result['panelchanged'])
+            ? get_string('license_ok_panel_changed', 'local_mcpconnector')
+            : get_string('license_ok', 'local_mcpconnector');
         redirect(
             $PAGE->url,
-            get_string('license_ok', 'local_mcpconnector'),
+            $message,
             null,
-            \core\output\notification::NOTIFY_SUCCESS
+            !empty($result['panelchanged'])
+                ? \core\output\notification::NOTIFY_WARNING
+                : \core\output\notification::NOTIFY_SUCCESS
         );
     } else {
         redirect(
@@ -147,6 +154,8 @@ if ($licensekey !== '' && ($licensestale || $recheck)) {
 if ($licensestatus !== 'ok') {
     echo $OUTPUT->notification(get_string('license_required', 'local_mcpconnector'), 'warning');
 }
+
+echo local_mcpconnector_render_panel_changed_notice();
 
 echo html_writer::tag('h3', get_string('license_heading', 'local_mcpconnector'));
 

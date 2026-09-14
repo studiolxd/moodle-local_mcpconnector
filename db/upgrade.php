@@ -284,5 +284,86 @@ function xmldb_local_mcpconnector_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026073300, 'local', 'mcpconnector');
     }
 
+    if ($oldversion < 2026091400) {
+        // 1.2.0: keys remember the panel that minted them, so re-pairing the
+        // site with another panel (or another license) can be detected and the
+        // orphaned keys regenerated instead of failing silently.
+        $dbman = $DB->get_manager();
+        $table = new xmldb_table('local_mcpconnector_keys');
+        $field = new xmldb_field(
+            'panelfingerprint',
+            XMLDB_TYPE_CHAR,
+            '64',
+            null,
+            null,
+            null,
+            null,
+            'status'
+        );
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Backfill: which panel do the keys already in the table belong to?
+        // Ask the panel once — a site that moved between panels before this
+        // release (the very case this feature exists for) has keys the current
+        // panel has never heard of, and stamping them as current would hide
+        // exactly the problem. A failure to reach the panel falls back to the
+        // optimistic assumption so the upgrade never blocks or cries wolf.
+        $fingerprint = local_mcpconnector_panel_fingerprint();
+        if ($fingerprint !== '') {
+            set_config('panel_fingerprint', $fingerprint, 'local_mcpconnector');
+
+            $known = null;
+            try {
+                $list = local_mcpconnector_panel_list_keys();
+                if (
+                    !empty($list['ok']) && empty($list['data']['truncated']) && isset($list['data']['keys'])
+                        && is_array($list['data']['keys'])
+                ) {
+                    $known = [];
+                    foreach ($list['data']['keys'] as $key) {
+                        if (!empty($key['id'])) {
+                            $known[] = (string) $key['id'];
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                $known = null;
+            }
+
+            if ($known === null) {
+                // Panel unreachable: assume the keys are the current panel's.
+                $DB->set_field_select(
+                    'local_mcpconnector_keys',
+                    'panelfingerprint',
+                    $fingerprint,
+                    'panelfingerprint IS NULL'
+                );
+            } else if (!empty($known)) {
+                [$insql, $params] = $DB->get_in_or_equal($known, SQL_PARAMS_NAMED);
+                $DB->set_field_select(
+                    'local_mcpconnector_keys',
+                    'panelfingerprint',
+                    $fingerprint,
+                    "panelfingerprint IS NULL AND panelkeyid {$insql}",
+                    $params
+                );
+            }
+
+            // Whatever is still unstamped was minted for another panel.
+            if (
+                $DB->record_exists_select(
+                    'local_mcpconnector_keys',
+                    "status <> 'revoked' AND panelfingerprint IS NULL"
+                )
+            ) {
+                set_config('panel_changed_at', time(), 'local_mcpconnector');
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026091400, 'local', 'mcpconnector');
+    }
+
     return true;
 }
