@@ -33,7 +33,12 @@ mkdir -p "$staging/local_mcpconnector"
 
 # Never ship dev/junk files; the directory prechecker rejects them. .github
 # carries the CI workflow, which only means anything in the public repo.
-excludes=(--exclude "TESTING.md" --exclude ".DS_Store" --exclude ".gitignore" --exclude ".github")
+# `*.zip`: los paquetes ya construidos viven en la raíz del repo, así que sin
+# esta exclusión cada zip se lleva dentro a los de las versiones anteriores —y
+# el de moodle.org, al construirse después, al de esta misma versión (visto el
+# 2026-09-14 preparando la 1.3.0: el zip de la 1.2.0 publicado lleva dentro el
+# de la 1.1.0).
+excludes=(--exclude "TESTING.md" --exclude ".DS_Store" --exclude ".gitignore" --exclude ".github" --exclude "*.zip")
 if $moodleorg; then
   # Directory build: English only.
   excludes+=(--exclude "lang/es/")
