@@ -67,8 +67,10 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
 2. Elige un rol del desplegable (solo salen roles que existen en el sitio) y
    pulsa **Crear la identidad del chat** → página de confirmación con el
    aviso de alcance → confirmar. Comprobar:
-   - Usuario nuevo en Moodle: `mcpconnector_chat`, auth `nologin`, correo
-     `@mcpconnector.invalid`, sin poder iniciar sesión.
+   - Usuario nuevo en Moodle: `mcpconnector_chat`, auth **`manual`** (NO
+     `nologin`: Moodle lo trata como cuenta deshabilitada y los servicios web
+     rechazan su token con `wsaccessusernologin`), contraseña `not cached`,
+     correo `@mcpconnector.invalid`, sin poder iniciar sesión.
    - Rol elegido asignado **a nivel de sistema** (Usuarios → Permisos →
      Asignar roles de sistema).
    - Token de servicios web para el servicio de ese rol.
@@ -76,8 +78,16 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
      identidad del chat (si la conexión no tenía ninguna designada a mano).
    - El chat del panel responde sin que nadie haya pegado nada.
 3. **Comprobar ahora** → el estado se verifica de verdad contra Moodle y
-   contra el panel; la fecha de comprobación se actualiza.
-4. **Regenerar** — probar cada rotura por separado, y después de cada una
+   contra el panel; la fecha de comprobación se actualiza. Incluye una
+   **llamada real de servicio web** con el token del chat
+   (`core_webservice_get_site_info` contra el propio sitio): debe decir que el
+   token funciona, y si no, enseñar el código de error de Moodle.
+4. **Cuenta rota de la 1.3.0** (quien venga de esa versión, o simulándolo con
+   `UPDATE mdl_user SET auth='nologin' WHERE username='mcpconnector_chat'`):
+   Comprobar ahora debe marcar el método de autenticación como deshabilitado y
+   el token como no funcional; **Regenerar** debe arreglar *esa misma* cuenta
+   (mismo id, mismo rol) y no crear una segunda.
+5. **Regenerar** — probar cada rotura por separado, y después de cada una
    pulsar Comprobar (el estado debe decir qué falta) y Regenerar (debe
    volver a verde, y el chat volver a funcionar):
    - Borrar el usuario de servicio en Moodle.
@@ -85,9 +95,9 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
    - Borrar su token (Servicios web → Gestionar tokens).
    - Borrar o revocar la clave en el panel. Tras regenerar, la clave anterior
      debe quedar revocada en el panel, no huérfana.
-5. **Cambiar de rol**: elegir otro rol y regenerar → el rol anterior se
+6. **Cambiar de rol**: elegir otro rol y regenerar → el rol anterior se
    retira, el nuevo se asigna, y la clave del panel se sustituye.
-6. **Que no se cruce con los usuarios normales**: el usuario de servicio NO
+7. **Que no se cruce con los usuarios normales**: el usuario de servicio NO
    debe aparecer en los selectores de la pestaña Users, ni salir en Keys, ni
    recibir correos, ni cambiar tras ejecutar el cron (`php admin/cli/cron.php`
    con auto-sync activado).
@@ -105,6 +115,27 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
    - Con más de 10 usuarios afectados la página dice que se hace en segundo
      plano: ejecuta el cron (`php admin/cli/cron.php`) y comprueba los correos.
 5. La clave vieja deja de funcionar contra el server MCP; la nueva sí.
+
+## PHPUnit
+
+Hay un Moodle de integración aparte en `~/Dev/studiolxd/learn/ci-moodle` (el de
+`~/Dev/studiolxd/learn/moodle` es el de trabajo: no se toca).
+
+**La trampa**: el PHP por defecto del Mac es la **8.5** y las dependencias de
+Moodle llegan a la **8.4**, así que sin anteponer la 8.4 el entorno de pruebas
+ni siquiera arranca y parece roto. Hay que ponerla delante en el `PATH` en cada
+comando:
+
+```sh
+cd ~/Dev/studiolxd/learn/ci-moodle
+ln -sfn ~/Dev/studiolxd/moodle-local_mcpconnector public/local/mcpconnector
+PATH=/opt/homebrew/opt/php@8.4/bin:$PATH php public/admin/tool/phpunit/cli/util.php --buildconfig
+PATH=/opt/homebrew/opt/php@8.4/bin:$PATH php vendor/bin/phpunit --testsuite local_mcpconnector_testsuite
+rm public/local/mcpconnector   # retirar el symlink al terminar
+```
+
+El `--buildconfig` hay que repetirlo cada vez que se añade o quita un fichero
+de `tests/`: el `phpunit.xml` lista las suites.
 
 ## Cierre de ronda
 

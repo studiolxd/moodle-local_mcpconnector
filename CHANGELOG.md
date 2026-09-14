@@ -2,6 +2,39 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.1 — 2026-09-14
+
+Fixes the chat identity shipped in 1.3.0: its service account could not use web
+services at all. **No database change.**
+
+### Fixed
+- **The service account is no longer created as `nologin`.** That looked like
+  the careful choice — an account that cannot use the login form — but in
+  Moodle `nologin` is the marker for a *disabled* account, and the web-service
+  layer refuses it outright (`wsaccessusernologin`, thrown before any function
+  runs). The consequence was total: the connection's health check reported
+  `error`, and **the chat could not talk to Moodle**, because it uses that
+  account's token. The account now uses `manual`, an enabled method, and keeps
+  the unusable-password sentinel (`AUTH_PASSWORD_NOT_CACHED`), so it still
+  cannot be logged into or have a password reset into it — it simply stops
+  being flagged as disabled. Provisioning checks the method is enabled on the
+  site first (`is_enabled_auth()`) and **fails with a clear message** rather
+  than creating an account that cannot work.
+- **Accounts already created by 1.3.0 are repaired, not duplicated.** The Chat
+  tab's *Regenerate* button now notices a service account on a disabled
+  authentication method and fixes that account in place, keeping its id, its
+  role and its history.
+
+### Added
+- **The status block checks that the token actually works**, instead of only
+  that it exists. *Check now* makes a real web-service call against this very
+  site with the chat's token (`core_webservice_get_site_info`, the cheapest
+  function every one of the plugin's services exposes, the same one the panel's
+  health check uses) and shows the result, with Moodle's own error code when
+  the call is refused. The block also reports the account's authentication
+  method and says plainly when it is one Moodle treats as disabled — which is
+  what 1.3.0 showed as correct.
+
 ## 1.3.0 — 2026-09-14
 
 The chat gets an identity of its own. **No database change**: everything new
