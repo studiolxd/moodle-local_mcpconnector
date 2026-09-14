@@ -2373,6 +2373,32 @@ define('LOCAL_MCPCONNECTOR_CHAT_USERNAME', 'mcpconnector_chat');
 define('LOCAL_MCPCONNECTOR_CHAT_EMAIL', 'mcpconnector_chat@mcpconnector.invalid');
 
 /**
+ * Authentication method of the chat service account.
+ *
+ * Deliberately NOT `nologin`: in Moodle that is the marker for a *disabled*
+ * account, and the web-service layer refuses it outright — webservice/lib.php
+ * throws `wsaccessusernologin` before running anything — so the token of a
+ * `nologin` account never works. `manual` is core's internal method, always
+ * enabled; paired with the AUTH_PASSWORD_NOT_CACHED sentinel the account still
+ * has no usable password, so nobody can log into it or reset a password into
+ * it. It simply stops being flagged as disabled.
+ */
+define('LOCAL_MCPCONNECTOR_CHAT_AUTH', 'manual');
+
+/**
+ * Whether an authentication method leaves an account usable for web services.
+ *
+ * `is_enabled_auth()` alone is not enough: core keeps `nologin` in its always-on
+ * list, so it answers true for the one method web services refuse.
+ *
+ * @param string $auth Authentication method shortname.
+ * @return bool
+ */
+function local_mcpconnector_chat_auth_is_usable(string $auth): bool {
+    return $auth !== '' && $auth !== 'nologin' && is_enabled_auth($auth);
+}
+
+/**
  * The roles the chat identity may be given, in the plugin's own priority order.
  *
  * Only roles that EXIST on this site are offered: the plugin deliberately does
@@ -2440,23 +2466,31 @@ function local_mcpconnector_chat_get_user(): ?stdClass {
 }
 
 /**
- * Creates the chat service account, or returns the existing one.
+ * Creates the chat service account, or returns the existing one, repaired.
  *
- * The account has no interactive access at all: `nologin` authentication and an
- * uncacheable password, so it can never be logged into or have a password reset
- * into it — it exists only to own a web-service token.
+ * The account has no interactive access: an uncacheable password, so it can
+ * never be logged into or have a password reset into it — it exists only to own
+ * a web-service token. Its authentication method is an ENABLED one on purpose;
+ * see LOCAL_MCPCONNECTOR_CHAT_AUTH.
  *
  * @return stdClass The user record.
- * @throws moodle_exception When Moodle refuses to create the account.
+ * @throws moodle_exception When the authentication method is disabled on this
+ *                          site, or Moodle refuses to create the account.
  */
 function local_mcpconnector_chat_ensure_user(): stdClass {
     global $CFG, $DB;
 
     require_once($CFG->dirroot . '/user/lib.php');
 
+    // Better no account than an account that cannot work: a disabled method
+    // would land us back where 1.3.0 was, with a token refused by every call.
+    if (!is_enabled_auth(LOCAL_MCPCONNECTOR_CHAT_AUTH)) {
+        throw new moodle_exception('chat_error_auth_disabled', 'local_mcpconnector');
+    }
+
     $existing = local_mcpconnector_chat_get_user();
     if ($existing) {
-        return $existing;
+        return local_mcpconnector_chat_repair_user($existing);
     }
 
     // The stored id is gone (deleted account, restored database): adopt the
@@ -2468,11 +2502,11 @@ function local_mcpconnector_chat_ensure_user(): stdClass {
         'deleted' => 0,
     ], '*', IGNORE_MISSING);
     if ($byusername) {
-        return $byusername;
+        return local_mcpconnector_chat_repair_user($byusername);
     }
 
     $record = new stdClass();
-    $record->auth = 'nologin';
+    $record->auth = LOCAL_MCPCONNECTOR_CHAT_AUTH;
     $record->username = LOCAL_MCPCONNECTOR_CHAT_USERNAME;
     // Not a hash of anything: the sentinel core uses for "there is no usable
     // password here", which every authentication path refuses.
@@ -2495,6 +2529,44 @@ function local_mcpconnector_chat_ensure_user(): stdClass {
     $userid = user_create_user($record, false, true);
 
     return $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
+}
+
+/**
+ * Puts an existing service account back on a usable authentication method.
+ *
+ * 1.3.0 created it as `nologin`, which Moodle treats as a disabled account: its
+ * token was refused by every web-service call, so the chat could not talk to
+ * Moodle at all. Repairing the account in place — rather than creating a second
+ * one — is what lets the Chat tab's one button fix an install that already has
+ * the broken account.
+ *
+ * @param stdClass $user The service account as it stands.
+ * @return stdClass The user record, reloaded when it had to be changed.
+ */
+function local_mcpconnector_chat_repair_user(stdClass $user): stdClass {
+    global $CFG, $DB;
+
+    require_once($CFG->dirroot . '/user/lib.php');
+
+    if (
+        local_mcpconnector_chat_auth_is_usable((string) $user->auth)
+        && (string) $user->password === AUTH_PASSWORD_NOT_CACHED
+    ) {
+        return $user;
+    }
+
+    $update = new stdClass();
+    $update->id = $user->id;
+    $update->auth = LOCAL_MCPCONNECTOR_CHAT_AUTH;
+    // The account gains web-service access, not a way in: the password stays
+    // the sentinel every authentication path refuses.
+    $update->password = AUTH_PASSWORD_NOT_CACHED;
+
+    // Passing $updatepassword = false: the sentinel must be stored verbatim,
+    // not hashed and not checked against the site's password policy.
+    user_update_user($update, false, true);
+
+    return $DB->get_record('user', ['id' => $user->id], '*', MUST_EXIST);
 }
 
 /**
@@ -2600,6 +2672,58 @@ function local_mcpconnector_chat_revoke_key(): array {
 }
 
 /**
+ * Calls this site's own web service with a token, to see whether it really works.
+ *
+ * Existing is not functioning — the lesson this plugin keeps relearning. The
+ * 1.3.0 identity had an account, a role, an authorization and a token, and every
+ * call made with that token failed. The only honest check is the call itself, so
+ * this is a real web-service request over HTTP against this site's own endpoint,
+ * using `core_webservice_get_site_info`: the cheapest function, exposed by every
+ * one of the plugin's services, and the same one the panel's health check makes.
+ *
+ * @param string $token A Moodle web-service token.
+ * @return array{ok:bool,error:string|null} 'error' is the Moodle error code when
+ *                                          the call was answered and refused.
+ */
+function local_mcpconnector_chat_probe_token(string $token): array {
+    global $CFG;
+
+    require_once($CFG->libdir . '/filelib.php');
+
+    if ($token === '') {
+        return ['ok' => false, 'error' => 'notoken'];
+    }
+
+    // Security checks are skipped on purpose: the URL is this site's own
+    // wwwroot, never anything a user supplied, and the blocked-hosts list
+    // legitimately covers the local addresses a development or intranet Moodle
+    // is served from.
+    $curl = new curl(['timeout' => 15, 'ignoresecurity' => true]);
+    $response = $curl->post($CFG->wwwroot . '/webservice/rest/server.php', [
+        'wstoken' => $token,
+        'wsfunction' => 'core_webservice_get_site_info',
+        'moodlewsrestformat' => 'json',
+    ]);
+
+    if (!empty($curl->error)) {
+        return ['ok' => false, 'error' => 'unreachable'];
+    }
+
+    $data = json_decode((string) $response, true);
+    if (!is_array($data)) {
+        return ['ok' => false, 'error' => 'unreadable'];
+    }
+    if (isset($data['exception']) || isset($data['errorcode'])) {
+        return ['ok' => false, 'error' => (string) ($data['errorcode'] ?? 'wserror')];
+    }
+    if (!isset($data['sitename'])) {
+        return ['ok' => false, 'error' => 'unreadable'];
+    }
+
+    return ['ok' => true, 'error' => null];
+}
+
+/**
  * The state of the chat identity, end to end.
  *
  * Everything is READ from the live site, never from a cached verdict: the point
@@ -2607,10 +2731,12 @@ function local_mcpconnector_chat_revoke_key(): array {
  * the role or revoked the token behind the plugin's back.
  *
  * @param bool $verifypanel Also ask the panel whether it still knows the key.
+ * @param bool $verifytoken Also make a real web-service call with the token.
  * @return array Status flags; 'panelknown' is null when the panel was not asked
- *               or could not answer.
+ *               or could not answer, and 'tokenworks' is null when the token was
+ *               not tried.
  */
-function local_mcpconnector_chat_status(bool $verifypanel = false): array {
+function local_mcpconnector_chat_status(bool $verifypanel = false, bool $verifytoken = false): array {
     global $DB;
 
     $role = (string) get_config('local_mcpconnector', 'chat_role');
@@ -2623,8 +2749,11 @@ function local_mcpconnector_chat_status(bool $verifypanel = false): array {
         'user' => null,
         'role' => $role,
         'roleok' => false,
+        'authok' => false,
         'authorized' => false,
         'tokenok' => false,
+        'tokenworks' => null,
+        'tokenerror' => null,
         'panelkeyid' => $panelkeyid,
         'keylast4' => (string) get_config('local_mcpconnector', 'chat_keylast4'),
         'registered' => $panelkeyid !== '',
@@ -2639,6 +2768,9 @@ function local_mcpconnector_chat_status(bool $verifypanel = false): array {
     if ($user) {
         $status['user'] = $user;
         $status['roleok'] = $role !== '' && local_mcpconnector_user_has_system_role((int) $user->id, [$role]);
+        // A `nologin` account (what 1.3.0 created) is a disabled account: the
+        // rest of this list can be green and nothing will work.
+        $status['authok'] = local_mcpconnector_chat_auth_is_usable((string) $user->auth);
 
         $serviceid = $role !== ''
             ? local_mcpconnector_get_service_id(local_mcpconnector_service_for_role($role))
@@ -2648,7 +2780,14 @@ function local_mcpconnector_chat_status(bool $verifypanel = false): array {
                 'externalserviceid' => $serviceid,
                 'userid' => $user->id,
             ]);
-            $status['tokenok'] = local_mcpconnector_get_user_service_token((int) $user->id, $serviceid) !== null;
+            $token = local_mcpconnector_get_user_service_token((int) $user->id, $serviceid);
+            $status['tokenok'] = $token !== null;
+
+            if ($verifytoken && $token !== null) {
+                $probe = local_mcpconnector_chat_probe_token($token);
+                $status['tokenworks'] = (bool) $probe['ok'];
+                $status['tokenerror'] = $probe['error'];
+            }
         }
     }
 
@@ -2675,8 +2814,10 @@ function local_mcpconnector_chat_status(bool $verifypanel = false): array {
 
     $status['ready'] = $status['user'] !== null
         && $status['roleok']
+        && $status['authok']
         && $status['authorized']
         && $status['tokenok']
+        && $status['tokenworks'] !== false
         && $status['registered']
         && !$status['foreign']
         && $status['panelknown'] !== false;
@@ -2690,8 +2831,9 @@ function local_mcpconnector_chat_status(bool $verifypanel = false): array {
  * Written so that "regenerate" is the same code path as "create": whatever is
  * missing is recreated, whatever survives is reused, and the token is always
  * fresh. That is what makes the tab's one button able to repair an identity
- * whose account was deleted, whose role was taken away, or whose key was
- * removed in the panel.
+ * whose account was deleted, whose role was taken away, whose key was removed in
+ * the panel, or — the 1.3.0 breakage — whose account was left on the `nologin`
+ * method and therefore had a token no web-service call would accept.
  *
  * @param string $role Role shortname chosen by the administrator.
  * @return array{ok:bool,error:string|null,userid:int}
@@ -2703,6 +2845,12 @@ function local_mcpconnector_chat_provision(string $role): array {
 
     if (!local_mcpconnector_license_is_valid()) {
         return ['ok' => false, 'error' => 'invalid_license', 'userid' => 0];
+    }
+
+    // Checked before anything is created: an account on a disabled method is an
+    // account whose token every web-service call refuses.
+    if (!is_enabled_auth(LOCAL_MCPCONNECTOR_CHAT_AUTH)) {
+        return ['ok' => false, 'error' => 'auth_disabled', 'userid' => 0];
     }
 
     if (!array_key_exists($role, local_mcpconnector_chat_role_options())) {

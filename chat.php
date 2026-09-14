@@ -115,21 +115,40 @@ if ($action === 'provision' && confirm_sesskey()) {
     );
 }
 
-// The panel is only asked on request: this page is not worth a signed HTTP
-// round trip on every load (the License tab learnt that the hard way).
-$status = local_mcpconnector_chat_status((bool) $check && $licenseok);
-if ($check && $licenseok) {
+// Neither the panel nor the token is tried on every load: this page is not
+// worth two HTTP round trips per refresh (the License tab learnt that the hard
+// way). "Check now" is what asks for the real thing. The token probe does not
+// need the license — it is a call to this very site.
+$status = local_mcpconnector_chat_status((bool) $check && $licenseok, (bool) $check);
+if ($check) {
     set_config('chat_checked_at', time(), 'local_mcpconnector');
     set_config(
-        'chat_panel_seen',
-        $status['panelknown'] === null ? -1 : (int) $status['panelknown'],
+        'chat_token_seen',
+        $status['tokenworks'] === null ? -1 : (int) $status['tokenworks'],
         'local_mcpconnector'
     );
-} else if ($status['registered']) {
+    set_config('chat_token_error', (string) ($status['tokenerror'] ?? ''), 'local_mcpconnector');
+    if ($licenseok) {
+        set_config(
+            'chat_panel_seen',
+            $status['panelknown'] === null ? -1 : (int) $status['panelknown'],
+            'local_mcpconnector'
+        );
+    }
+} else {
     // Show what the last real check found, rather than nothing at all.
-    $seen = get_config('local_mcpconnector', 'chat_panel_seen');
-    if ($seen !== false && (int) $seen !== -1) {
-        $status['panelknown'] = (bool) (int) $seen;
+    if ($status['registered']) {
+        $seen = get_config('local_mcpconnector', 'chat_panel_seen');
+        if ($seen !== false && (int) $seen !== -1) {
+            $status['panelknown'] = (bool) (int) $seen;
+        }
+    }
+    if ($status['tokenok']) {
+        $tokenseen = get_config('local_mcpconnector', 'chat_token_seen');
+        if ($tokenseen !== false && (int) $tokenseen !== -1) {
+            $status['tokenworks'] = (bool) (int) $tokenseen;
+            $status['tokenerror'] = (string) get_config('local_mcpconnector', 'chat_token_error') ?: null;
+        }
     }
 }
 $checkedat = (int) get_config('local_mcpconnector', 'chat_checked_at');
@@ -166,6 +185,11 @@ if ($status['user']) {
         'username' => $status['user']->username,
         'email' => $status['user']->email,
     ]);
+    // 1.3.0 left this account on `nologin`, which Moodle reads as "disabled":
+    // say so plainly instead of showing the account as correct.
+    $lines[] = $status['authok']
+        ? get_string('chat_auth_ok', 'local_mcpconnector', s($status['user']->auth))
+        : get_string('chat_auth_broken', 'local_mcpconnector', s($status['user']->auth));
 } else {
     $lines[] = get_string('chat_user_missing', 'local_mcpconnector');
 }
@@ -186,6 +210,21 @@ $lines[] = $status['authorized']
 $lines[] = $status['tokenok']
     ? get_string('chat_token_ok', 'local_mcpconnector')
     : get_string('chat_token_missing', 'local_mcpconnector');
+
+// Having a token is not having a working token: the call itself is the check.
+if ($status['tokenok']) {
+    if ($status['tokenworks'] === true) {
+        $lines[] = get_string('chat_token_works', 'local_mcpconnector');
+    } else if ($status['tokenworks'] === false) {
+        $lines[] = get_string(
+            'chat_token_broken',
+            'local_mcpconnector',
+            s((string) ($status['tokenerror'] ?? ''))
+        );
+    } else {
+        $lines[] = get_string('chat_token_untested', 'local_mcpconnector');
+    }
+}
 
 if (!$status['registered']) {
     $lines[] = get_string('chat_panel_missing', 'local_mcpconnector');
