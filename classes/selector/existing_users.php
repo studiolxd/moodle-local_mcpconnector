@@ -68,10 +68,14 @@ class existing_users extends \user_selector_base {
             'u.deleted = 0',
             'u.suspended = 0',
             'u.id <> ?',
+            // The chat service account is authorized for a service too, but it is
+            // managed from the Chat tab; removing it from here would break the chat.
+            'u.id <> ?',
         ];
         $sqlparams = [
             $serviceid,
             isset($CFG->siteguest) ? (int) $CFG->siteguest : 0,
+            local_mcpconnector_chat_userid(),
         ];
 
         // Manual search SQL construction to ensure strictly positional parameters.

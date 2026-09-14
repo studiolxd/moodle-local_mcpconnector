@@ -66,6 +66,14 @@ if ($hassiteconfig || has_capability($managecap, context_system::instance())) {
         $managecap
     ));
 
+    // Chat.
+    $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
+        'local_mcpconnector_chat',
+        get_string('tab_chat', 'local_mcpconnector'),
+        new moodle_url('/local/mcpconnector/chat.php'),
+        $managecap
+    ));
+
     // Health.
     $ADMIN->add('local_mcpconnector_category', new admin_externalpage(
         'local_mcpconnector_health',

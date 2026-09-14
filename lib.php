@@ -247,6 +247,15 @@ function local_mcpconnector_deprovision_resources(string $reason): array {
         "status <> 'revoked'"
     );
 
+    // The revoke-all above took the chat identity's key with everything else, and its
+    // service, authorization and token were just deleted above: forget the key
+    // so the Chat tab reports the truth instead of a key that no longer exists.
+    // The account and the chosen role are left alone — re-provisioning reuses them.
+    unset_config('chat_panelkeyid', 'local_mcpconnector');
+    unset_config('chat_keylast4', 'local_mcpconnector');
+    unset_config('chat_panelfingerprint', 'local_mcpconnector');
+    unset_config('chat_registered_at', 'local_mcpconnector');
+
     return [
         'servicesremoved' => count($serviceids),
         'panel' => ['ok' => (bool) $panel['ok'], 'error' => $panel['error'] ?? null],
@@ -974,6 +983,15 @@ function local_mcpconnector_suspend_user_panel_keys(int $userid): array {
  * @return array{ok:bool,error:string|null}
  */
 function local_mcpconnector_delete_user_keys(int $userid): array {
+    // The chat identity's key is not in the local key table (it belongs to the
+    // site, not to a person), so deleting that account has to revoke it here or
+    // the panel would keep a live key pointing at a token that no longer exists.
+    if (local_mcpconnector_is_chat_user($userid)) {
+        $chat = local_mcpconnector_chat_revoke_key();
+        local_mcpconnector_revoke_service_tokens($userid);
+        return ['ok' => $chat['ok'], 'error' => $chat['error']];
+    }
+
     $result = local_mcpconnector_revoke_user_panel_keys($userid);
     // Moodle tokens are local rows; remove them regardless so no stale token lingers.
     local_mcpconnector_revoke_service_tokens($userid);
@@ -991,6 +1009,13 @@ function local_mcpconnector_delete_user_keys(int $userid): array {
  */
 function local_mcpconnector_recalculate_user_key(int $userid): array {
     global $DB;
+
+    // The chat service account is not a person and is provisioned only from the
+    // Chat tab. It holds a system role, so the role-driven reconciliation below
+    // would mint it a second, personal key and churn it on every run.
+    if (local_mcpconnector_is_chat_user($userid)) {
+        return ['ok' => true, 'data' => null, 'error' => null];
+    }
 
     // Serialise reconciliation per user: two concurrent workers (e.g. an adhoc
     // task and the scheduled sync) would otherwise both revoke and re-mint,
@@ -1761,6 +1786,10 @@ function local_mcpconnector_assign_user_to_service(int $userid, string $services
         return ['ok' => false, 'error' => 'invalid_license', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
 
+    if (local_mcpconnector_is_chat_user($userid)) {
+        return ['ok' => false, 'error' => 'chat_user', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
+    }
+
     if (!local_mcpconnector_user_is_eligible_for_service($userid, $serviceshortname)) {
         return ['ok' => false, 'error' => 'not_eligible', 'mcpkey' => null, 'mcpurl' => null, 'queued' => false];
     }
@@ -1842,6 +1871,12 @@ function local_mcpconnector_sync_user_auto(
 
     if (!local_mcpconnector_license_is_valid()) {
         return ['ok' => false, 'added' => 0, 'removed' => 0, 'result' => null, 'error' => 'invalid_license', 'data' => null];
+    }
+
+    // The chat identity is provisioned only from the Chat tab: automatic
+    // role-driven syncing must never add, remove or re-key it.
+    if (local_mcpconnector_is_chat_user((int) $user->id)) {
+        return ['ok' => true, 'added' => 0, 'removed' => 0, 'result' => null, 'error' => null, 'data' => null];
     }
 
     // Services are ensured once by the bulk/entry callers (sync_all_users, the adhoc
@@ -2223,6 +2258,11 @@ function local_mcpconnector_print_tabs(string $current): void {
             get_string('tab_keys', 'local_mcpconnector')
         ),
         new tabobject(
+            'chat',
+            new moodle_url('/local/mcpconnector/chat.php'),
+            get_string('tab_chat', 'local_mcpconnector')
+        ),
+        new tabobject(
             'health',
             new moodle_url('/local/mcpconnector/health.php'),
             get_string('tab_health', 'local_mcpconnector')
@@ -2315,4 +2355,429 @@ function local_mcpconnector_render_key_action(string $action, string $label, str
     $form .= html_writer::empty_tag('input', ['type' => 'submit', 'class' => 'btn btn-secondary', 'value' => $label]);
     $form .= html_writer::end_tag('form');
     return $form;
+}
+
+/**
+ * Username of the Moodle account that carries the chat identity.
+ *
+ * Stable on purpose: the account is looked up by the stored id, but a site that
+ * lost the config (or an admin reading the user list) must still recognise it.
+ */
+define('LOCAL_MCPCONNECTOR_CHAT_USERNAME', 'mcpconnector_chat');
+
+/**
+ * Mailbox of the chat service account. The `.invalid` TLD is reserved by
+ * RFC 2606 precisely so it can never resolve: the address is unique, obviously
+ * non-human, and cannot collide with a real person's email.
+ */
+define('LOCAL_MCPCONNECTOR_CHAT_EMAIL', 'mcpconnector_chat@mcpconnector.invalid');
+
+/**
+ * The roles the chat identity may be given, in the plugin's own priority order.
+ *
+ * Only roles that EXIST on this site are offered: the plugin deliberately does
+ * not define a role of its own. 'admin' is listed for completeness — no stock
+ * Moodle site has a role with that shortname, so it simply never appears (site
+ * administrators are a config list, not a role).
+ *
+ * @return array<string,string> role shortname => localised role name.
+ */
+function local_mcpconnector_chat_role_options(): array {
+    global $DB;
+
+    $systemcontext = context_system::instance();
+    $options = [];
+    foreach (['admin', 'manager', 'editingteacher', 'teacher', 'student', 'user'] as $shortname) {
+        $role = $DB->get_record('role', ['shortname' => $shortname], 'id, name, shortname', IGNORE_MISSING);
+        if (!$role) {
+            continue;
+        }
+        $options[$shortname] = role_get_name($role, $systemcontext);
+    }
+
+    return $options;
+}
+
+/**
+ * The Moodle user id recorded as the chat identity, 0 when there is none.
+ *
+ * @return int
+ */
+function local_mcpconnector_chat_userid(): int {
+    return (int) get_config('local_mcpconnector', 'chat_userid');
+}
+
+/**
+ * Whether a user id is the chat service account.
+ *
+ * Every automatic provisioning path checks this: the service account has a
+ * system role, so the ordinary role-driven sync would happily mint it a second,
+ * personal key and then churn it on every run.
+ *
+ * @param int $userid
+ * @return bool
+ */
+function local_mcpconnector_is_chat_user(int $userid): bool {
+    $chatuserid = local_mcpconnector_chat_userid();
+    return $chatuserid > 0 && $chatuserid === $userid;
+}
+
+/**
+ * Returns the chat service account, or null when it is gone.
+ *
+ * @return stdClass|null
+ */
+function local_mcpconnector_chat_get_user(): ?stdClass {
+    global $DB;
+
+    $userid = local_mcpconnector_chat_userid();
+    if ($userid <= 0) {
+        return null;
+    }
+
+    $user = $DB->get_record('user', ['id' => $userid, 'deleted' => 0], '*', IGNORE_MISSING);
+    return $user ?: null;
+}
+
+/**
+ * Creates the chat service account, or returns the existing one.
+ *
+ * The account has no interactive access at all: `nologin` authentication and an
+ * uncacheable password, so it can never be logged into or have a password reset
+ * into it — it exists only to own a web-service token.
+ *
+ * @return stdClass The user record.
+ * @throws moodle_exception When Moodle refuses to create the account.
+ */
+function local_mcpconnector_chat_ensure_user(): stdClass {
+    global $CFG, $DB;
+
+    require_once($CFG->dirroot . '/user/lib.php');
+
+    $existing = local_mcpconnector_chat_get_user();
+    if ($existing) {
+        return $existing;
+    }
+
+    // The stored id is gone (deleted account, restored database): adopt the
+    // account holding our username if it is still around. A deleted Moodle user
+    // has its username mangled by delete_user(), so this never resurrects one.
+    $byusername = $DB->get_record('user', [
+        'username' => LOCAL_MCPCONNECTOR_CHAT_USERNAME,
+        'mnethostid' => $CFG->mnet_localhost_id,
+        'deleted' => 0,
+    ], '*', IGNORE_MISSING);
+    if ($byusername) {
+        return $byusername;
+    }
+
+    $record = new stdClass();
+    $record->auth = 'nologin';
+    $record->username = LOCAL_MCPCONNECTOR_CHAT_USERNAME;
+    // Not a hash of anything: the sentinel core uses for "there is no usable
+    // password here", which every authentication path refuses.
+    $record->password = AUTH_PASSWORD_NOT_CACHED;
+    $record->firstname = 'Studio LXD';
+    $record->lastname = 'Chat';
+    $record->email = LOCAL_MCPCONNECTOR_CHAT_EMAIL;
+    $record->confirmed = 1;
+    $record->policyagreed = 1;
+    $record->mnethostid = $CFG->mnet_localhost_id;
+    $record->lang = $CFG->lang ?? 'en';
+    $record->maildisplay = 0;
+    // Nothing should ever be mailed to a mailbox that cannot exist.
+    $record->emailstop = 1;
+    $record->description = 'Service account for the Studio LXD chat assistant. '
+        . 'Created by local_mcpconnector; it cannot log in.';
+
+    // Passing $updatepassword = false: the password column is the not-cached sentinel and
+    // must be stored verbatim, not hashed.
+    $userid = user_create_user($record, false, true);
+
+    return $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
+}
+
+/**
+ * Gives the chat account a role at SYSTEM level, replacing the previous one.
+ *
+ * The assignment is deliberately not component-owned: an administrator must be
+ * able to see and remove it like any other, and the Chat tab is built to notice
+ * when that happens.
+ *
+ * @param int $userid
+ * @param string $role Role shortname.
+ * @param string $previousrole Role shortname to unassign first, '' for none.
+ * @return bool False when the site has no such role.
+ */
+function local_mcpconnector_chat_assign_role(int $userid, string $role, string $previousrole = ''): bool {
+    global $DB;
+
+    $systemcontext = context_system::instance();
+
+    if ($previousrole !== '' && $previousrole !== $role) {
+        $previousid = $DB->get_field('role', 'id', ['shortname' => $previousrole], IGNORE_MISSING);
+        if ($previousid) {
+            role_unassign((int) $previousid, $userid, $systemcontext->id);
+        }
+    }
+
+    $roleid = $DB->get_field('role', 'id', ['shortname' => $role], IGNORE_MISSING);
+    if (!$roleid) {
+        return false;
+    }
+
+    role_assign((int) $roleid, $userid, $systemcontext->id);
+    return true;
+}
+
+/**
+ * Registers the chat identity's token in the panel as a SERVICE key.
+ *
+ * Same endpoint and authentication as a user key; `kind: service` is what tells
+ * the panel this is the chat's identity — it designates it automatically when
+ * the connection has no designated key, and revokes the previous service key of
+ * the connection, which is what keeps "regenerate" from leaving dead
+ * credentials behind.
+ *
+ * The returned key value is used by nobody on this side: it is never stored,
+ * emailed or displayed — only its last characters are kept, for the status.
+ *
+ * @param int $userid
+ * @param string $moodletoken
+ * @param string $role Role shortname baked into the key.
+ * @return array{ok:bool,data:array|null,error:string|null}
+ */
+function local_mcpconnector_chat_register_key(int $userid, string $moodletoken, string $role): array {
+    $license = local_mcpconnector_get_license_key();
+    if ($license === '' || !local_mcpconnector_license_is_valid()) {
+        return ['ok' => false, 'data' => null, 'error' => 'invalid_license'];
+    }
+
+    $result = local_mcpconnector_call_panel_api('/api/moodle/keys', [
+        'licenseKey' => $license,
+        'kind' => 'service',
+        // A fixed, non-personal label: this key belongs to the site, not a person.
+        'name' => core_text::substr('Studio LXD chat (' . $role . ')', 0, 120),
+        'moodleToken' => $moodletoken,
+        'moodleRoles' => [$role],
+        // The chat identity must not lapse on its own: an expired chat is a
+        // silently broken assistant nobody is watching.
+        'expiresAt' => null,
+    ]);
+
+    if ($result['ok'] && !empty($result['data']['id'])) {
+        set_config('chat_userid', $userid, 'local_mcpconnector');
+        set_config('chat_role', $role, 'local_mcpconnector');
+        set_config('chat_panelkeyid', (string) $result['data']['id'], 'local_mcpconnector');
+        set_config('chat_keylast4', (string) ($result['data']['keyLast4'] ?? ''), 'local_mcpconnector');
+        set_config('chat_panelfingerprint', local_mcpconnector_panel_fingerprint(), 'local_mcpconnector');
+        set_config('chat_registered_at', time(), 'local_mcpconnector');
+    }
+
+    return $result;
+}
+
+/**
+ * Forgets the chat identity's panel key, revoking it first when possible.
+ *
+ * @return array{ok:bool,error:string|null}
+ */
+function local_mcpconnector_chat_revoke_key(): array {
+    $keyid = (string) get_config('local_mcpconnector', 'chat_panelkeyid');
+    if ($keyid === '') {
+        return ['ok' => true, 'error' => null];
+    }
+
+    $result = local_mcpconnector_panel_revoke_key($keyid);
+
+    unset_config('chat_panelkeyid', 'local_mcpconnector');
+    unset_config('chat_keylast4', 'local_mcpconnector');
+    unset_config('chat_panelfingerprint', 'local_mcpconnector');
+    unset_config('chat_registered_at', 'local_mcpconnector');
+
+    $ok = $result['ok'] || ($result['error'] ?? '') === 'not_found';
+    return ['ok' => $ok, 'error' => $ok ? null : ($result['error'] ?? 'revoke_failed')];
+}
+
+/**
+ * The state of the chat identity, end to end.
+ *
+ * Everything is READ from the live site, never from a cached verdict: the point
+ * of this tab is to catch an administrator having deleted the account, dropped
+ * the role or revoked the token behind the plugin's back.
+ *
+ * @param bool $verifypanel Also ask the panel whether it still knows the key.
+ * @return array Status flags; 'panelknown' is null when the panel was not asked
+ *               or could not answer.
+ */
+function local_mcpconnector_chat_status(bool $verifypanel = false): array {
+    global $DB;
+
+    $role = (string) get_config('local_mcpconnector', 'chat_role');
+    $panelkeyid = (string) get_config('local_mcpconnector', 'chat_panelkeyid');
+    $storedfingerprint = (string) get_config('local_mcpconnector', 'chat_panelfingerprint');
+    $currentfingerprint = local_mcpconnector_panel_fingerprint();
+
+    $status = [
+        'userid' => local_mcpconnector_chat_userid(),
+        'user' => null,
+        'role' => $role,
+        'roleok' => false,
+        'authorized' => false,
+        'tokenok' => false,
+        'panelkeyid' => $panelkeyid,
+        'keylast4' => (string) get_config('local_mcpconnector', 'chat_keylast4'),
+        'registered' => $panelkeyid !== '',
+        'registeredat' => (int) get_config('local_mcpconnector', 'chat_registered_at'),
+        'foreign' => $panelkeyid !== '' && $currentfingerprint !== '' && $storedfingerprint !== $currentfingerprint,
+        'panelknown' => null,
+        'panelerror' => null,
+        'ready' => false,
+    ];
+
+    $user = local_mcpconnector_chat_get_user();
+    if ($user) {
+        $status['user'] = $user;
+        $status['roleok'] = $role !== '' && local_mcpconnector_user_has_system_role((int) $user->id, [$role]);
+
+        $serviceid = $role !== ''
+            ? local_mcpconnector_get_service_id(local_mcpconnector_service_for_role($role))
+            : null;
+        if ($serviceid) {
+            $status['authorized'] = $DB->record_exists('external_services_users', [
+                'externalserviceid' => $serviceid,
+                'userid' => $user->id,
+            ]);
+            $status['tokenok'] = local_mcpconnector_get_user_service_token((int) $user->id, $serviceid) !== null;
+        }
+    }
+
+    if ($verifypanel && $status['registered']) {
+        $list = local_mcpconnector_panel_list_keys();
+        if (empty($list['ok']) || !isset($list['data']['keys']) || !is_array($list['data']['keys'])) {
+            $status['panelerror'] = (string) ($list['error'] ?? 'panel_unreachable');
+        } else {
+            $found = null;
+            foreach ($list['data']['keys'] as $key) {
+                if ((string) ($key['id'] ?? '') === $panelkeyid) {
+                    $found = $key;
+                    break;
+                }
+            }
+            if ($found !== null) {
+                $status['panelknown'] = (string) ($found['status'] ?? 'active') !== 'revoked';
+            } else if (empty($list['data']['truncated'])) {
+                // The panel listed everything and ours was not in it: it is gone.
+                $status['panelknown'] = false;
+            }
+        }
+    }
+
+    $status['ready'] = $status['user'] !== null
+        && $status['roleok']
+        && $status['authorized']
+        && $status['tokenok']
+        && $status['registered']
+        && !$status['foreign']
+        && $status['panelknown'] !== false;
+
+    return $status;
+}
+
+/**
+ * Creates or regenerates the chat identity: account, role, token and panel key.
+ *
+ * Written so that "regenerate" is the same code path as "create": whatever is
+ * missing is recreated, whatever survives is reused, and the token is always
+ * fresh. That is what makes the tab's one button able to repair an identity
+ * whose account was deleted, whose role was taken away, or whose key was
+ * removed in the panel.
+ *
+ * @param string $role Role shortname chosen by the administrator.
+ * @return array{ok:bool,error:string|null,userid:int}
+ */
+function local_mcpconnector_chat_provision(string $role): array {
+    global $CFG, $DB;
+
+    require_once($CFG->dirroot . '/webservice/lib.php');
+
+    if (!local_mcpconnector_license_is_valid()) {
+        return ['ok' => false, 'error' => 'invalid_license', 'userid' => 0];
+    }
+
+    if (!array_key_exists($role, local_mcpconnector_chat_role_options())) {
+        return ['ok' => false, 'error' => 'role_not_available', 'userid' => 0];
+    }
+
+    local_mcpconnector_ensure_services();
+    $serviceid = local_mcpconnector_get_service_id(local_mcpconnector_service_for_role($role));
+    if (!$serviceid) {
+        return ['ok' => false, 'error' => 'missing_service', 'userid' => 0];
+    }
+
+    try {
+        $user = local_mcpconnector_chat_ensure_user();
+    } catch (Exception $e) {
+        debugging('local_mcpconnector: could not create the chat service account: '
+            . $e->getMessage(), DEBUG_DEVELOPER);
+        return ['ok' => false, 'error' => 'user_create_failed', 'userid' => 0];
+    }
+
+    $userid = (int) $user->id;
+    // Remember the account before anything else can fail: a half-finished run
+    // must not leave a second service account behind on the next attempt.
+    set_config('chat_userid', $userid, 'local_mcpconnector');
+
+    $previousrole = (string) get_config('local_mcpconnector', 'chat_role');
+    if (!local_mcpconnector_chat_assign_role($userid, $role, $previousrole)) {
+        return ['ok' => false, 'error' => 'role_not_available', 'userid' => $userid];
+    }
+    set_config('chat_role', $role, 'local_mcpconnector');
+
+    // One identity, one service: drop every other authorization this account may
+    // carry from a previous role so its token can only reach the chosen one.
+    foreach (local_mcpconnector_get_service_ids() as $otherid) {
+        if ((int) $otherid !== (int) $serviceid) {
+            $DB->delete_records('external_services_users', [
+                'externalserviceid' => $otherid,
+                'userid' => $userid,
+            ]);
+        }
+    }
+    local_mcpconnector_authorize_user_for_service($userid, $serviceid);
+
+    // Always a fresh token: the old one may have been revoked by hand, and the
+    // panel's copy of it is unreachable from here either way.
+    local_mcpconnector_revoke_service_tokens($userid);
+    try {
+        $token = local_mcpconnector_rotate_user_token($userid, $serviceid, 0);
+    } catch (Exception $e) {
+        debugging('local_mcpconnector: could not mint the chat token: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        return ['ok' => false, 'error' => 'token_failed', 'userid' => $userid];
+    }
+
+    // The panel revokes the connection's previous service key as it registers
+    // this one, so no explicit revoke is needed (nor wanted: a failed revoke
+    // would abort a repair that is otherwise fine).
+    $result = local_mcpconnector_chat_register_key($userid, $token, $role);
+    if (!$result['ok']) {
+        return ['ok' => false, 'error' => (string) ($result['error'] ?? 'panel_error'), 'userid' => $userid];
+    }
+
+    return ['ok' => true, 'error' => null, 'userid' => $userid];
+}
+
+/**
+ * Translates a chat provisioning error code into a user-facing message.
+ *
+ * @param string $code
+ * @return string
+ */
+function local_mcpconnector_chat_error_message(string $code): string {
+    $stringkey = 'chat_error_' . $code;
+    if (get_string_manager()->string_exists($stringkey, 'local_mcpconnector')) {
+        return get_string($stringkey, 'local_mcpconnector');
+    }
+
+    return local_mcpconnector_panel_error_message($code);
 }

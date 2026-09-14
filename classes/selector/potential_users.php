@@ -66,11 +66,14 @@ class potential_users extends \user_selector_base {
         $limit = $this->options['perpage'] ?? 100;
 
         $role = local_mcpconnector_role_from_service($service);
-        $wheres = ['u.deleted = 0', 'u.suspended = 0', 'u.confirmed = 1', 'u.id <> ?'];
+        // The chat service account is excluded like the guest: it is not a person,
+        // and its key is provisioned from the Chat tab, never from here.
+        $wheres = ['u.deleted = 0', 'u.suspended = 0', 'u.confirmed = 1', 'u.id <> ?', 'u.id <> ?'];
         $wheres[] = "u.id NOT IN (SELECT userid FROM {external_services_users} WHERE externalserviceid = ?)";
 
         $sqlparams = [
             isset($CFG->siteguest) ? (int) $CFG->siteguest : 0,
+            local_mcpconnector_chat_userid(),
             $serviceid,
         ];
 

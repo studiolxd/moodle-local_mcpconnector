@@ -41,6 +41,10 @@ use context_system;
  * to the external MCP panel service. Moodle core tables it drives
  * (external_tokens, external_services_users) are handled by the core_external
  * privacy provider.
+ *
+ * The chat identity adds nothing to declare: it is a service account, not a
+ * person, and what the plugin keeps about it (its user id, role and panel key
+ * id) is site configuration rather than user data.
  */
 class provider implements
     \core_privacy\local\metadata\provider,

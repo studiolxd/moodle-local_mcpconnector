@@ -38,6 +38,23 @@ function xmldb_local_mcpconnector_uninstall() {
     // are already logged with debugging() inside the shared helper.
     local_mcpconnector_deprovision_resources('uninstall');
 
+    // The chat service account outlives the plugin (deleting user accounts at
+    // uninstall time would be a surprise), but its privileges must not: take the
+    // system role back and suspend it, so what is left behind is an inert record.
+    $chatuserid = local_mcpconnector_chat_userid();
+    if ($chatuserid > 0) {
+        $chatrole = (string) get_config('local_mcpconnector', 'chat_role');
+        $roleid = $chatrole !== ''
+            ? $DB->get_field('role', 'id', ['shortname' => $chatrole], IGNORE_MISSING)
+            : false;
+        if ($roleid) {
+            role_unassign((int) $roleid, $chatuserid, context_system::instance()->id);
+        }
+        if ($DB->record_exists('user', ['id' => $chatuserid, 'deleted' => 0])) {
+            $DB->set_field('user', 'suspended', 1, ['id' => $chatuserid]);
+        }
+    }
+
     // Clean up plugin config.
     unset_all_config_for_plugin('local_mcpconnector');
 
