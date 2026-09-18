@@ -106,18 +106,32 @@ $string['deprovision_panel_warning'] = 'Moodle-side services and tokens were rem
 $string['deprovision_success'] = 'Deprovisioned successfully: {$a} service(s) removed and every panel key revoked.';
 $string['editfunctions'] = 'Edit functions';
 $string['email_body'] = 'Email body';
-$string['email_body_default'] = 'Hello, {$a->firstname}:' . "\n\n" .
-    'Your Studio LXD access is ready. There are two ways to connect your AI assistant:' . "\n\n" .
-    '1) Claude Desktop or ChatGPT (recommended): add a connector with this URL and sign in with your Moodle account when prompted — you do NOT need the key below:' . "\n" .
-    '   {$a->mcpurl}' . "\n\n" .
-    '2) Tools that accept a token (Cursor, scripts, CLI): use the URL above and send this key as a header  Authorization: Bearer <key>' . "\n" .
-    '   {$a->mcpkey}' . "\n\n" .
-    'Full instructions: {$a->docsurl}' . "\n\n" .
-    'Keep the key private. Contact your administrator if you need a new one.';
+$string['email_body_default'] = 'Hello, {$a->firstname}:' . "
+
+" .
+    'Your LMS MCP access is ready. There are two ways to connect your AI assistant:' . "
+
+" .
+    '1) Claude Desktop or ChatGPT (recommended). Add a connector with the following URL, choose OAuth authentication and sign in:' . "
+
+" .
+    '   {$a->mcpurl}' . "
+
+" .
+    '2) Tools that accept a token (Cursor, scripts, CLI). Use the URL above and send this key as a header:' . "
+
+" .
+    '   Authorization: Bearer {$a->mcpkey}' . "
+
+" .
+    'Keep this key somewhere safe and contact your administrator if you need a new one.' . "
+
+" .
+    'The full documentation on how to set up the MCP is available at: {$a->docsurl}';
 $string['email_body_desc'] = 'Body template for the MCP key email. Placeholders: {$a->firstname}, {$a->lastname}, {$a->username}, {$a->email}, {$a->mcpkey}, {$a->mcpurl} (the MCP endpoint), {$a->docsurl} (the connection guide).';
 $string['email_section'] = 'Email key delivery';
 $string['email_subject'] = 'Email subject';
-$string['email_subject_default'] = 'Your Studio LXD access';
+$string['email_subject_default'] = 'Your LMS MCP access';
 $string['email_subject_desc'] = 'Subject line for the MCP key email.';
 $string['errordetail'] = '{$a}';
 $string['existing_users'] = 'Existing users';

@@ -98,18 +98,32 @@ $string['deprovision_panel_warning'] = 'Se eliminaron los servicios y tokens en 
 $string['deprovision_success'] = 'Desprovisión completada: se eliminaron {$a} servicio(s) y se revocaron todas las claves del panel.';
 $string['editfunctions'] = 'Editar funciones';
 $string['email_body'] = 'Cuerpo del email';
-$string['email_body_default'] = 'Hola, {$a->firstname}:' . "\n\n" .
-    'Tu acceso a Studio LXD está listo. Hay dos formas de conectar tu asistente de IA:' . "\n\n" .
-    '1) Claude Desktop o ChatGPT (recomendado): añade un conector con esta URL e inicia sesión con tu Moodle cuando te lo pida — NO necesitas la clave de abajo:' . "\n" .
-    '   {$a->mcpurl}' . "\n\n" .
-    '2) Herramientas que aceptan un token (Cursor, scripts, CLI): usa la URL de arriba y envía esta clave como cabecera  Authorization: Bearer <clave>' . "\n" .
-    '   {$a->mcpkey}' . "\n\n" .
-    'Instrucciones completas: {$a->docsurl}' . "\n\n" .
-    'Mantén la clave en privado. Contacta con tu administrador si necesitas una nueva.';
+$string['email_body_default'] = 'Hola, {$a->firstname}:' . "
+
+" .
+    'Tu acceso a LMS MCP está listo. Hay dos formas de conectar tu asistente de IA:' . "
+
+" .
+    '1) Claude Desktop o ChatGPT (recomendado). Añade un conector con la siguiente URL, elige autenticación OAuth e inicia sesión:' . "
+
+" .
+    '   {$a->mcpurl}' . "
+
+" .
+    '2) Herramientas que aceptan un token (Cursor, scripts, CLI). Usa la URL anterior y envía esta clave como cabecera:' . "
+
+" .
+    '   Authorization: Bearer {$a->mcpkey}' . "
+
+" .
+    'Mantén esta clave en un lugar seguro y contacta con tu administrador si necesitas una nueva.' . "
+
+" .
+    'Puedes consultar la documentación completa sobre cómo configurar el MCP en: {$a->docsurl}';
 $string['email_body_desc'] = 'Plantilla del cuerpo del email con la clave MCP. Placeholders: {$a->firstname}, {$a->lastname}, {$a->username}, {$a->email}, {$a->mcpkey}, {$a->mcpurl} (el endpoint MCP), {$a->docsurl} (la guía de conexión).';
 $string['email_section'] = 'Envío de claves por email';
 $string['email_subject'] = 'Asunto del email';
-$string['email_subject_default'] = 'Tu acceso a Studio LXD';
+$string['email_subject_default'] = 'Tu acceso a LMS MCP';
 $string['email_subject_desc'] = 'Asunto del email con la clave MCP.';
 $string['errordetail'] = '{$a}';
 $string['existing_users'] = 'Usuarios existentes';

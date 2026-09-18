@@ -2,6 +2,19 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.3 — 2026-09-18
+
+The key email that Moodle users receive is the first thing anyone outside the
+suite reads, and it still said "Studio LXD" and mixed the two connection
+paths into one paragraph. Rewritten in Spanish by the product owner and
+translated to English. **No database change.**
+
+### Changed
+- `email_subject_default` and `email_body_default` (en, es): the product is
+  named "LMS MCP"; the two ways to connect are numbered steps, the OAuth path
+  says to choose OAuth authentication, the token path shows the exact header
+  (`Authorization: Bearer <key>`), and the documentation link closes the email.
+
 ## 1.3.2 — 2026-09-14
 
 The panel learns the plugin's version at license validation time, not only
