@@ -365,5 +365,18 @@ function xmldb_local_mcpconnector_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091400, 'local', 'mcpconnector');
     }
 
+    if ($oldversion < 2026092900) {
+        // 1.3.4: installs made before this release created the services before
+        // Moodle had registered this plugin's functions, so they were left
+        // without any local_mcpconnector_*. Add the missing ones — additively,
+        // keeping every change the administrator made to the services.
+        require_once($CFG->libdir . '/upgradelib.php');
+        external_update_descriptions('local_mcpconnector');
+        local_mcpconnector_ensure_services();
+        local_mcpconnector_add_missing_plugin_functions();
+
+        upgrade_plugin_savepoint(true, 2026092900, 'local', 'mcpconnector');
+    }
+
     return true;
 }

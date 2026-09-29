@@ -33,7 +33,14 @@ function xmldb_local_mcpconnector_install() {
     global $CFG;
 
     require_once($CFG->dirroot . '/local/mcpconnector/lib.php');
+    require_once($CFG->libdir . '/upgradelib.php');
 
+    // Moodle registers this plugin's db/services.php functions only AFTER this
+    // hook (upgrade_plugins() → upgrade_component_updated()), and the sync below
+    // skips functions missing from external_functions: without this the
+    // services were born without any local_mcpconnector_* function. Moodle's
+    // own later call is idempotent.
+    external_update_descriptions('local_mcpconnector');
     local_mcpconnector_ensure_services();
     local_mcpconnector_sync_all_service_functions();
 

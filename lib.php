@@ -326,6 +326,55 @@ function local_mcpconnector_sync_all_service_functions(): void {
 }
 
 /**
+ * Adds to every plugin service the plugin's own functions (local_mcpconnector_*)
+ * its definition lists but the service lacks. Additive only: nothing is ever
+ * removed, so functions the administrator added or removed by hand stay as
+ * they are — except a missing plugin function, which comes back.
+ *
+ * Repairs the services of installs made before 1.3.4, whose install hook ran
+ * before Moodle had registered this plugin's functions (see db/install.php).
+ * Deliberately NOT called from local_mcpconnector_ensure_services(): that runs
+ * on every admin page, and would undo an administrator who unticks one of
+ * these functions on the service edit page.
+ *
+ * @return int Number of service functions added.
+ */
+function local_mcpconnector_add_missing_plugin_functions(): int {
+    global $DB;
+
+    $added = 0;
+    foreach (local_mcpconnector_get_service_definitions() as $definition) {
+        $serviceid = $DB->get_field('external_services', 'id', ['shortname' => $definition['shortname']]);
+        if (!$serviceid) {
+            continue;
+        }
+        $current = $DB->get_records_menu(
+            'external_services_functions',
+            ['externalserviceid' => $serviceid],
+            '',
+            'functionname,id'
+        );
+        foreach ($definition['functions'] as $functionname) {
+            if (strpos($functionname, 'local_mcpconnector_') !== 0 || isset($current[$functionname])) {
+                continue;
+            }
+            // Only functions this Moodle knows, as in local_mcpconnector_set_service_functions().
+            if (!$DB->record_exists('external_functions', ['name' => $functionname])) {
+                continue;
+            }
+            $DB->insert_record('external_services_functions', (object) [
+                'externalserviceid' => (int) $serviceid,
+                'functionname' => $functionname,
+            ]);
+            $current[$functionname] = true;
+            $added++;
+        }
+    }
+
+    return $added;
+}
+
+/**
  * Returns a list of available external functions for form selection.
  *
  * @return array<string,string>
