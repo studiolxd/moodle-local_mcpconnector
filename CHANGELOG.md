@@ -5,8 +5,10 @@ All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 ## 1.3.4 — 2026-09-29
 
 A clean install left the plugin's services without any of its own functions,
-so the panel saw Moodle answer but reported the plugin as not installed. **No
-schema change**; the upgrade repairs the services of sites already affected.
+so the panel saw Moodle answer but reported the plugin as not installed; and
+the Chat tab reported every freshly created identity as unknown to the panel.
+**No schema change**; the upgrade repairs the services of sites already
+affected.
 
 ### Fixed
 - **Clean installs now give the services their `local_mcpconnector_*`
@@ -24,6 +26,14 @@ schema change**; the upgrade repairs the services of sites already affected.
   they are. It deliberately runs once, at upgrade, and not on every admin
   page, so an administrator who later unticks one of the plugin's functions on
   a service keeps that choice.
+- **The Chat tab no longer says "The panel no longer knows this key" about a
+  key that is fine.** The check asked the panel for the plugin's keys with
+  `createdBy: moodle`, the users' keys; the panel files the chat identity's key
+  as a *service* key and filters by that field, so the key was never in the
+  answer. The chat check now asks for `createdBy: all` and looks its key up by
+  id, which works with the panel already deployed. The user sync still asks
+  for `moodle` keys only (`local_mcpconnector_panel_list_keys()` keeps that
+  default and takes the filter as a new optional parameter).
 
 ## 1.3.3 — 2026-09-18
 
