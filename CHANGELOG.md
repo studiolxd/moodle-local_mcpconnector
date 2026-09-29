@@ -2,6 +2,29 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.4 — 2026-09-29
+
+A clean install left the plugin's services without any of its own functions,
+so the panel saw Moodle answer but reported the plugin as not installed. **No
+schema change**; the upgrade repairs the services of sites already affected.
+
+### Fixed
+- **Clean installs now give the services their `local_mcpconnector_*`
+  functions.** Moodle registers a plugin's `db/services.php` only *after* its
+  install hook runs, and the hook created the services by copying only the
+  functions Moodle already knew — none of the plugin's own 24. The hook now
+  registers them first (`external_update_descriptions()`, the same call the
+  2.22 upgrade step uses; Moodle's own later call is idempotent). Until now
+  the only way out was *Restore service* on the Services tab, or a later
+  plugin update.
+- **Sites installed before 1.3.4 are repaired on upgrade.** A new upgrade step
+  adds to every `mcpconnector_*` service the plugin functions it lacks
+  (`local_mcpconnector_add_missing_plugin_functions()`). It only adds, never
+  removes: core functions the administrator added or removed by hand stay as
+  they are. It deliberately runs once, at upgrade, and not on every admin
+  page, so an administrator who later unticks one of the plugin's functions on
+  a service keeps that choice.
+
 ## 1.3.3 — 2026-09-18
 
 The key email that Moodle users receive is the first thing anyone outside the
