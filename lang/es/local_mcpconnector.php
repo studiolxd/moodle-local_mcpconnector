@@ -185,6 +185,7 @@ $string['keys_section'] = 'Claves MCP';
 $string['keys_sent'] = 'Enviado';
 $string['keys_status'] = 'Estado';
 $string['keys_user'] = 'Usuario';
+$string['license_admin_notice'] = 'MCP Connector necesita una licencia válida para funcionar. Configúrala en {$a}.';
 $string['license_checked_at'] = 'Última comprobación: {$a}';
 $string['license_empty'] = 'La clave de licencia es obligatoria.';
 $string['license_error'] = 'La licencia es incorrecta o no se pudo verificar.';
@@ -200,8 +201,6 @@ $string['license_status_error'] = 'Incorrecta';
 $string['license_status_label'] = 'Estado de licencia: {$a}';
 $string['license_status_missing'] = 'No configurada';
 $string['license_status_ok'] = 'Configurada';
-$string['mcp_url'] = 'URL del endpoint MCP';
-$string['mcp_url_help'] = 'El endpoint MCP al que se conectan tus asistentes de IA — el subdominio de tu organización en el panel, p. ej. https://tu-org.slxd.app/mcp. El panel te muestra la URL exacta al crear la conexión (cópiala de ahí). Se inserta en los emails de claves mediante el marcador mcpurl.';
 $string['mcpconnector:manage'] = 'Gestionar MCP Connector';
 $string['missing'] = 'Falta';
 $string['missingservice'] = 'Falta el registro del servicio.';
@@ -228,7 +227,6 @@ $string['panel_secret'] = 'Secreto del panel';
 $string['panel_secret_help'] = 'Secreto compartido con el que se firma cada petición que el plugin envía al panel.';
 $string['panel_secret_missing'] = 'El secreto del panel no está configurado. Introduce el par clave de licencia + secreto emitido por tu panel.';
 $string['panel_url'] = 'URL del panel';
-$string['panel_url_help'] = 'URL base de tu panel Studio LXD, p. ej. https://lmsmcp.slxd.app.';
 $string['pluginname'] = 'MCP Connector for Moodle';
 
 

@@ -53,13 +53,7 @@ if ($created > 0) {
 
 if ($action === 'save_license' && confirm_sesskey()) {
     $license = optional_param('license_key', '', PARAM_RAW_TRIMMED);
-    $panelurl = optional_param('panel_url', '', PARAM_URL);
     $panelsecret = optional_param('panel_secret', '', PARAM_RAW_TRIMMED);
-    $mcpurl = optional_param('mcp_url', '', PARAM_URL);
-
-    // Store the non-secret connection settings first: validation signs the request with them.
-    set_config('panel_url', rtrim($panelurl, '/'), 'local_mcpconnector');
-    set_config('mcp_url', rtrim($mcpurl, '/'), 'local_mcpconnector');
 
     // Secrets are write-only: only overwrite when a new value is submitted, so a blank
     // field keeps the stored value instead of wiping it.
@@ -118,9 +112,7 @@ if (!empty($notifications)) {
 local_mcpconnector_print_tabs('license');
 
 $licensekey = (string) get_config('local_mcpconnector', 'license_key');
-$panelurl = (string) get_config('local_mcpconnector', 'panel_url');
 $panelsecret = (string) get_config('local_mcpconnector', 'panel_secret');
-$mcpurl = (string) get_config('local_mcpconnector', 'mcp_url');
 $licensestatus = (string) get_config('local_mcpconnector', 'license_status');
 $licenseerror = (string) get_config('local_mcpconnector', 'license_last_error');
 $checkedat = (int) get_config('local_mcpconnector', 'license_checked_at');
@@ -195,18 +187,6 @@ echo html_writer::start_tag('form', [
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save_license']);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 
-echo html_writer::start_tag('p');
-echo html_writer::tag('label', get_string('panel_url', 'local_mcpconnector'), ['for' => 'local_mcpconnector_panel_url']);
-echo html_writer::empty_tag('input', [
-    'type' => 'url',
-    'name' => 'panel_url',
-    'id' => 'local_mcpconnector_panel_url',
-    'value' => $panelurl !== '' ? $panelurl : local_mcpconnector_api_base_url(),
-    'size' => 40,
-]);
-echo html_writer::end_tag('p');
-echo html_writer::tag('p', get_string('panel_url_help', 'local_mcpconnector'));
-
 // Secrets are never echoed back: the field is rendered empty and only overwrites
 // the stored value when the admin types a new one.
 echo html_writer::start_tag('p');
@@ -240,18 +220,6 @@ echo html_writer::tag('p', get_string('panel_secret_help', 'local_mcpconnector')
 if ($panelsecret !== '') {
     echo html_writer::tag('p', get_string('secret_keep_blank', 'local_mcpconnector'));
 }
-
-echo html_writer::start_tag('p');
-echo html_writer::tag('label', get_string('mcp_url', 'local_mcpconnector'), ['for' => 'local_mcpconnector_mcp_url']);
-echo html_writer::empty_tag('input', [
-    'type' => 'url',
-    'name' => 'mcp_url',
-    'id' => 'local_mcpconnector_mcp_url',
-    'value' => $mcpurl,
-    'size' => 40,
-]);
-echo html_writer::end_tag('p');
-echo html_writer::tag('p', get_string('mcp_url_help', 'local_mcpconnector'));
 
 echo html_writer::empty_tag('input', [
     'type' => 'submit',

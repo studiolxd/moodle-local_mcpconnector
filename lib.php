@@ -74,12 +74,28 @@ function local_mcpconnector_get_panel_secret(): string {
  * Returns the configured MCP endpoint URL (the URL AI assistants connect to).
  *
  * This is NOT the panel URL: the panel manages licenses and keys, the MCP
- * endpoint serves the actual MCP protocol. Used in key emails.
+ * endpoint serves the actual MCP protocol. Used in key emails. There is no
+ * admin field for it any more: it arrives from the panel's own
+ * `/api/moodle/verify` response at license validation time (see
+ * local_mcpconnector_validate_license()).
  *
  * @return string
  */
 function local_mcpconnector_get_mcp_url(): string {
     return rtrim(trim((string) get_config('local_mcpconnector', 'mcp_url')), '/');
+}
+
+/**
+ * Whether a string is a well-formed https:// URL.
+ *
+ * Used to sanity-check the `mcpUrl` the panel returns from
+ * `/api/moodle/verify` before it is trusted and stored.
+ *
+ * @param string $url
+ * @return bool
+ */
+function local_mcpconnector_is_https_url(string $url): bool {
+    return $url !== '' && stripos($url, 'https://') === 0 && clean_param($url, PARAM_URL) === $url;
 }
 
 /**
@@ -1409,6 +1425,38 @@ function local_mcpconnector_license_is_valid(): bool {
 }
 
 /**
+ * Warns a site administrator, on every Site administration page, while the
+ * plugin has no working license — including Notifications, where an admin
+ * lands right after install/upgrade, since this plugin has no
+ * `admin_setting_*` of its own for Moodle to show there instead.
+ *
+ * Implemented as the plain legacy callback name (`before_standard_top_of_body_html`)
+ * rather than a `db/hooks.php` registration for `\core\hook\output\before_standard_top_of_body_html_generation`:
+ * Moodle's hook system auto-dispatches this exact legacy name as that hook on
+ * 4.4+, and calls it directly as the old-style callback on 4.2/4.3, so one
+ * function covers the whole 4.2–5.2 support range without version-specific
+ * code or an extra file.
+ *
+ * @return string HTML, or '' when there is nothing to say.
+ */
+function local_mcpconnector_before_standard_top_of_body_html(): string {
+    global $PAGE, $OUTPUT;
+
+    if (!is_siteadmin() || $PAGE->pagelayout !== 'admin' || local_mcpconnector_license_is_valid()) {
+        return '';
+    }
+
+    $licenseurl = new moodle_url('/local/mcpconnector/index.php');
+    if ($PAGE->has_set_url() && $PAGE->url->compare($licenseurl, URL_MATCH_BASE)) {
+        // Already shown inline on the License tab itself.
+        return '';
+    }
+
+    $link = html_writer::link($licenseurl, get_string('tab_license', 'local_mcpconnector'));
+    return $OUTPUT->notification(get_string('license_admin_notice', 'local_mcpconnector', $link), 'warning');
+}
+
+/**
  * Fingerprint identifying the panel installation a key belongs to.
  *
  * A key is only ever valid on the panel that minted it: move the site to
@@ -2261,6 +2309,15 @@ function local_mcpconnector_validate_license(string $license): array {
     ], local_mcpconnector_plugin_version_fields()));
 
     if ($result['ok'] && !empty($result['data']['valid'])) {
+        // The panel is also the only source of the MCP endpoint URL now (no
+        // admin field for it): store it when this response carries one, and
+        // keep whatever was stored before when it doesn't (an older panel
+        // that predates this contract, or a transient omission).
+        $mcpurl = $result['data']['mcpUrl'] ?? null;
+        if (is_string($mcpurl) && local_mcpconnector_is_https_url($mcpurl)) {
+            set_config('mcp_url', rtrim($mcpurl, '/'), 'local_mcpconnector');
+        }
+
         // Validation is the only moment the site learns which panel it is
         // paired with — record it (and notice a change of panel) here, so
         // every caller benefits without repeating the bookkeeping.
