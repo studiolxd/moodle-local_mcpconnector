@@ -1754,9 +1754,13 @@ function local_mcpconnector_panel_create_key(int $userid, string $moodletoken, $
  *
  * Metadata only — panel API v2 never returns key values or Moodle tokens.
  *
+ * @param string $createdby Which keys the panel lists: 'moodle' (the users'
+ *               keys, what the user sync reconciles), 'manual' or 'all'. The
+ *               chat identity's key is a service key (createdBy 'service' on
+ *               the panel) and only shows up under 'all'.
  * @return array{ok:bool,data:array|null,error:string|null}
  */
-function local_mcpconnector_panel_list_keys(): array {
+function local_mcpconnector_panel_list_keys(string $createdby = 'moodle'): array {
     $license = local_mcpconnector_get_license_key();
     if ($license === '' || !local_mcpconnector_license_is_valid()) {
         return ['ok' => false, 'data' => null, 'error' => 'invalid_license'];
@@ -1764,7 +1768,7 @@ function local_mcpconnector_panel_list_keys(): array {
 
     return local_mcpconnector_call_panel_api('/api/moodle/keys/list', [
         'licenseKey' => $license,
-        'createdBy' => 'moodle',
+        'createdBy' => $createdby,
     ]);
 }
 
@@ -2857,7 +2861,10 @@ function local_mcpconnector_chat_status(bool $verifypanel = false, bool $verifyt
     }
 
     if ($verifypanel && $status['registered']) {
-        $list = local_mcpconnector_panel_list_keys();
+        // Ask for all keys, not the default 'moodle' ones: the panel stores this
+        // key as a service key and filters by that, so the default listing never
+        // has it and every freshly created identity was reported as gone.
+        $list = local_mcpconnector_panel_list_keys('all');
         if (empty($list['ok']) || !isset($list['data']['keys']) || !is_array($list['data']['keys'])) {
             $status['panelerror'] = (string) ($list['error'] ?? 'panel_unreachable');
         } else {
