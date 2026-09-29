@@ -22,14 +22,30 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
 3. En el panel: **Organización → Moodle** → conectar con la URL del Moodle
    local (p. ej. `http://localhost:8888`) → copiar la **clave de licencia** y
    el **secreto de panel** (se muestran UNA vez).
+4. La pestaña License ya NO tiene un campo «URL del panel» (apunta a
+   `https://lmsmcp.slxd.app` por defecto — ver `local_mcpconnector_api_base_url()`
+   en `lib.php`). Para desarrollo contra el panel local, fuerza el valor desde
+   `config.php` del Moodle de pruebas, ANTES de validar la licencia:
+   ```php
+   $CFG->forced_plugin_settings['local_mcpconnector']['panel_url'] = 'http://localhost:3000';
+   ```
+   `get_config()` ya respeta `forced_plugin_settings` de forma nativa; no hace
+   falta tocar la base de datos ni el plugin.
 
 ## Cada iteración
 
 1. Purga cachés de Moodle (Site administration → Development → Purge caches).
    Si el cambio toca `db/` o `version.php`: visita Notifications y ejecuta el
    upgrade.
-2. **Licencia**: pestaña License del plugin → pegar URL del panel
-   (`http://localhost:3000`), licencia y secreto → Validate → estado `ok`.
+2. **Licencia**: con `panel_url` ya forzado desde `config.php` (ver
+   Preparación), pestaña License del plugin → pegar licencia y secreto →
+   Validate → estado `ok`. El endpoint MCP (`mcp_url`) ya no se pega a mano:
+   llega en la respuesta de `/api/moodle/verify` (campo `mcpUrl`) y el plugin
+   lo guarda solo si es una URL `https://` válida; si el panel no lo manda
+   (contrato aún no desplegado), conserva el valor que hubiera. No se muestra
+   en ninguna pantalla del plugin — comprobar el valor guardado con
+   `php admin/cli/cfg.php --component=local_mcpconnector --name=mcp_url` (o en
+   el correo de clave, que lo usa como URL de conexión).
    - Negativos: secreto incorrecto → `invalid_credentials`; URL de Moodle que
      no coincide con la conexión → `url_mismatch`.
 3. **Alta de clave**: pestaña Users → asignar un usuario a un servicio → la
@@ -58,6 +74,28 @@ Checklist para cada ronda de pruebas en el Moodle local. El panel dev corre en
 6. **Flujos automáticos**: borrar un usuario de Moodle (o quitarle el rol) →
    el adhoc task revoca sus claves en el panel (verificar en
    `/organization/moodle/keys` y en el audit log de la organización).
+
+## Aviso de licencia pendiente (instalación en limpio)
+
+El plugin no registra `admin_setting_*` (todo vive en páginas propias), así
+que Moodle no enseña nada tras instalar y vuelve a Notifications. Mientras no
+haya licencia válida, `local_mcpconnector_before_standard_top_of_body_html()`
+(callback legacy, auto-mapeado por Moodle al hook
+`\core\hook\output\before_standard_top_of_body_html_generation` en las
+versiones que lo tienen — cubre 4.2 a 5.2 sin `db/hooks.php`) pinta un aviso
+con enlace a la pestaña License en toda página con layout `admin` (incluida
+Notifications) vista por un administrador de sitio.
+
+1. Instala el plugin en limpio (o `unset_config('license_status', ...)` y
+   `unset_config('license_key', ...)` para simularlo) → entra como admin en
+   Site administration → Notifications: debe verse el aviso.
+2. Navega a cualquier página bajo Site administration (p. ej. Plugins
+   overview): el aviso se repite.
+3. Entra en la propia pestaña License: el aviso NO se repite (ya hay uno
+   inline en esa página) — solo el de `license_required`.
+4. Valida la licencia → el aviso desaparece de todas las páginas de admin.
+5. Como usuario NO administrador (o en una página fuera de Site
+   administration) el aviso nunca aparece.
 
 ## Identidad del chat (pestaña Chat)
 

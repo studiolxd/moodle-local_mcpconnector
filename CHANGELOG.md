@@ -2,6 +2,41 @@
 
 All notable changes to the MCP Connector for Moodle (`local_mcpconnector`).
 
+## 1.3.5 — 2026-09-29
+
+Less to configure by hand: the panel URL and the MCP endpoint URL were the two
+fields most likely to be pasted wrong, and a clean install left the
+administrator with no clue anything needed attention. **No database change.**
+
+### Changed
+- **The License tab no longer has a "Panel URL" field.** It already fell back
+  to `https://lmsmcp.slxd.app` when empty (`local_mcpconnector_api_base_url()`);
+  a developer who needs another panel still points at it with
+  `$CFG->forced_plugin_settings['local_mcpconnector']['panel_url']` in
+  `config.php` (documented in TESTING.md), which `get_config()` already
+  honours. A `panel_url` saved by an earlier version keeps working — the
+  upgrade does not touch it.
+- **The "MCP Endpoint URL" field is gone too — the panel supplies it.**
+  `/api/moodle/verify` can answer with an `mcpUrl` (the connection's own MCP
+  URL); when it does and the value is a well-formed `https://` URL, the plugin
+  stores it (`local_mcpconnector_is_https_url()`); an older panel that stays
+  silent on it, or a malformed value, leaves whatever was stored before
+  untouched. The field never appears anywhere in the UI — only in the key
+  email, as before. Sending a key email with no `mcp_url` configured still
+  goes out (the connect-URL line is simply blank; nothing throws).
+
+### Added
+- **A standing warning while the license isn't valid.** Fresh installs land
+  on Notifications with nothing to click, since this plugin has no
+  `admin_setting_*` of its own for Moodle to surface there. A site
+  administrator now sees a banner, linking to the License tab, on every Site
+  administration page (Notifications included) until validation succeeds —
+  implemented as the plain legacy callback
+  `local_mcpconnector_before_standard_top_of_body_html()`, which Moodle's hook
+  system auto-dispatches as `\core\hook\output\before_standard_top_of_body_html_generation`
+  on the versions that have it, and calls directly on the ones that don't: one
+  function, no `db/hooks.php`, covering the whole 4.2–5.2 range.
+
 ## 1.3.4 — 2026-09-29
 
 A clean install left the plugin's services without any of its own functions,
