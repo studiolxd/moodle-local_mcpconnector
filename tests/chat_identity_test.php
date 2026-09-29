@@ -33,6 +33,7 @@ namespace local_mcpconnector;
  * @covers     \local_mcpconnector_chat_assign_role
  * @covers     \local_mcpconnector_chat_status
  * @covers     \local_mcpconnector_chat_role_options
+ * @covers     \local_mcpconnector_panel_list_keys
  */
 final class chat_identity_test extends \advanced_testcase {
     /**
@@ -322,5 +323,61 @@ final class chat_identity_test extends \advanced_testcase {
         $this->assertFalse($result['ok']);
         $this->assertSame('invalid_license', $result['error']);
         $this->assertFalse($DB->record_exists('user', ['username' => LOCAL_MCPCONNECTOR_CHAT_USERNAME]));
+    }
+
+    /**
+     * Marks the identity as registered on a validated panel, as provisioning does.
+     *
+     * @param string $panelkeyid
+     */
+    private function register_on_panel(string $panelkeyid): void {
+        set_config('panel_url', 'https://panel.example.com', 'local_mcpconnector');
+        set_config('license_key', 'lic-1', 'local_mcpconnector');
+        set_config('panel_secret', 'secret-1', 'local_mcpconnector');
+        set_config('license_status', 'ok', 'local_mcpconnector');
+        set_config('chat_panelkeyid', $panelkeyid, 'local_mcpconnector');
+        set_config('chat_panelfingerprint', local_mcpconnector_panel_fingerprint(), 'local_mcpconnector');
+    }
+
+    public function test_status_finds_the_chat_key_the_panel_lists_as_a_service_key(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $keyid = '6f9619ff-8b86-4d01-b42d-00c04fc964ff';
+        $this->register_on_panel($keyid);
+        // What the panel answers to createdBy 'all': the chat key is a
+        // 'service' key, next to the users' 'moodle' ones.
+        \curl::mock_response(json_encode([
+            'keys' => [
+                ['id' => '11111111-2222-4333-8444-555555555555', 'status' => 'active', 'createdBy' => 'moodle'],
+                ['id' => $keyid, 'status' => 'active', 'createdBy' => 'service'],
+            ],
+            'truncated' => false,
+        ]));
+
+        $status = local_mcpconnector_chat_status(true);
+
+        $this->assertNull($status['panelerror']);
+        $this->assertTrue($status['panelknown']);
+    }
+
+    public function test_status_reports_the_chat_key_gone_only_when_the_panel_lacks_it(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_lib();
+
+        $this->register_on_panel('6f9619ff-8b86-4d01-b42d-00c04fc964ff');
+        \curl::mock_response(json_encode([
+            'keys' => [
+                ['id' => '11111111-2222-4333-8444-555555555555', 'status' => 'active', 'createdBy' => 'moodle'],
+            ],
+            'truncated' => false,
+        ]));
+
+        $status = local_mcpconnector_chat_status(true);
+
+        $this->assertFalse($status['panelknown']);
+        $this->assertFalse($status['ready']);
     }
 }
